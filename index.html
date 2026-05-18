@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dealer Plate Sign-Out — Tolleson Post Production</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+    body { background: #0D2240; color: #fff; min-height: 100vh; }
+
+    .screen { display: none; min-height: 100vh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ── WELCOME ─────────────────────────────────────────────────── */
+    .wl-bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .wl-bg-dots { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(0,174,217,0.12) 1px, transparent 1px); background-size: 28px 28px; }
+    .wl-bg-glow1 { position: absolute; width: 600px; height: 400px; background: #00AED9; opacity: 0.05; border-radius: 50%; top: -150px; right: -120px; }
+    .wl-bg-glow2 { position: absolute; width: 350px; height: 350px; background: #00AED9; opacity: 0.04; border-radius: 50%; bottom: -120px; left: -80px; }
+
+    .wl-header { position: relative; z-index: 1; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 0.5px solid rgba(0,174,217,0.15); background: rgba(13,34,64,0.8); }
+    .wl-brand { display: flex; align-items: center; gap: 10px; }
+    .wl-brand-icon { width: 36px; height: 36px; border-radius: 8px; background: #00AED9; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .wl-brand-icon i { font-size: 19px; color: #fff; }
+    .wl-brand-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .wl-brand-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 1px; }
+    .wl-header-right { display: flex; align-items: center; gap: 10px; }
+    .wl-shift-pill { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .wl-shift-pill.s1 { background: rgba(0,174,217,0.18); color: #00AED9; border: 0.5px solid rgba(0,174,217,0.3); }
+    .wl-shift-pill.s2 { background: rgba(0,174,217,0.12); color: #5DD4F0; border: 0.5px solid rgba(0,174,217,0.2); }
+    .wl-shift-pill.btwn { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); border: 0.5px solid rgba(255,255,255,0.1); }
+    .wl-clock { font-size: 12px; color: rgba(255,255,255,0.35); font-family: 'DM Mono', monospace; }
+
+    .wl-body { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; padding: 2rem 2.5rem; gap: 2.5rem; }
+    .wl-left { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+    .wl-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: #00AED9; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .wl-eyebrow::before { content: ''; display: inline-block; width: 22px; height: 2px; background: #00AED9; border-radius: 2px; }
+    .wl-greeting { font-size: 26px; font-weight: 700; color: #fff; line-height: 1.25; margin-bottom: 12px; letter-spacing: -0.5px; }
+    .wl-greeting span { color: #00AED9; }
+    .wl-sub { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.75; margin-bottom: 2rem; max-width: 320px; }
+
+    .wl-stats { display: flex; gap: 10px; margin-bottom: 2rem; }
+    .wl-stat { flex: 1; background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-align: center; }
+    .wl-stat-num { font-size: 28px; font-weight: 700; font-family: 'DM Mono', monospace; line-height: 1; }
+    .wl-stat-num.green { color: #2FE5A0; }
+    .wl-stat-num.blue { color: #00AED9; }
+    .wl-stat-num.red { color: #FF6B6B; }
+    .wl-stat-lbl { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.7px; }
+
+    .wl-actions { display: flex; flex-direction: column; gap: 10px; max-width: 380px; }
+    .wl-btn-main {
+      all: unset; display: flex !important; align-items: center !important; justify-content: center !important; gap: 9px;
+      box-sizing: border-box !important; width: 100% !important; padding: 16px 20px !important;
+      border-radius: 12px !important; border: 2px solid #00AED9 !important; background-color: #00AED9 !important;
+      color: #ffffff !important; font-size: 15px !important; font-weight: 700 !important;
+      font-family: 'DM Sans', sans-serif !important; cursor: pointer !important; -webkit-text-fill-color: #ffffff !important;
+      transition: background 0.15s;
+    }
+    .wl-btn-main:hover { background-color: #00c5f5 !important; border-color: #00c5f5 !important; }
+    .wl-btn-main i { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+    .wl-btn-admin {
+      all: unset; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px;
+      box-sizing: border-box !important; width: 100% !important; padding: 13px 20px !important;
+      border-radius: 12px !important; border: 2px solid rgba(255,255,255,0.55) !important; background-color: transparent !important;
+      color: #ffffff !important; font-size: 13px !important; font-weight: 600 !important;
+      font-family: 'DM Sans', sans-serif !important; cursor: pointer !important; -webkit-text-fill-color: #ffffff !important;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .wl-btn-admin:hover { background-color: rgba(255,255,255,0.1) !important; border-color: #fff !important; }
+    .wl-btn-admin i { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+
+    .wl-right { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+
+    .wl-footer { position: relative; z-index: 1; padding: 12px 24px; border-top: 0.5px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; background: rgba(13,34,64,0.6); }
+    .wl-footer-date { font-size: 11px; color: rgba(255,255,255,0.2); }
+    .wl-footer-tag { font-size: 11px; color: rgba(0,174,217,0.55); font-weight: 500; letter-spacing: 0.3px; }
+
+    /* ── APP BAR (shared) ────────────────────────────────────────── */
+    .app-bar { background: #0D2240; border-bottom: 0.5px solid rgba(0,174,217,0.2); padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+    .app-bar-brand { display: flex; align-items: center; gap: 10px; }
+    .app-bar-icon { width: 32px; height: 32px; border-radius: 7px; background: #00AED9; display: flex; align-items: center; justify-content: center; }
+    .app-bar-icon i { font-size: 17px; color: #fff; }
+    .app-bar-name { font-size: 14px; font-weight: 700; color: #fff; }
+    .app-bar-sub { font-size: 11px; color: rgba(255,255,255,0.4); }
+    .app-bar-right { display: flex; align-items: center; gap: 10px; }
+    .shift-badge { padding: 3px 11px; border-radius: 20px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .shift-badge.s1 { background: rgba(0,174,217,0.18); color: #00AED9; border: 0.5px solid rgba(0,174,217,0.3); }
+    .shift-badge.s2 { background: rgba(0,174,217,0.12); color: #5DD4F0; border: 0.5px solid rgba(0,174,217,0.2); }
+    .shift-badge.btwn { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.4); border: 0.5px solid rgba(255,255,255,0.12); }
+    .clock-txt { font-size: 12px; color: rgba(255,255,255,0.35); font-family: 'DM Mono', monospace; }
+
+    /* ── BOARD ───────────────────────────────────────────────────── */
+    .board-body { flex: 1; padding: 1.25rem 1.25rem 2rem; background: #0D2240; }
+    .board-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
+    .btn-back { padding: 7px 14px; font-size: 13px; border-radius: 8px; border: 0.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #fff; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 5px; }
+    .btn-back:hover { background: rgba(255,255,255,0.1); }
+    .overdue-alert { background: rgba(216,90,48,0.15); border: 0.5px solid rgba(216,90,48,0.4); border-radius: 10px; padding: 11px 14px; margin-bottom: 1.25rem; display: none; align-items: flex-start; gap: 10px; }
+    .overdue-alert i { font-size: 18px; color: #FF6B6B; flex-shrink: 0; margin-top: 1px; }
+    .overdue-alert-text { font-size: 13px; color: #FFB3A0; line-height: 1.5; }
+    .plates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; }
+    .plate-card { background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; }
+    .plate-card.available { border-left: 3px solid #2FE5A0; }
+    .plate-card.checked-out { border-left: 3px solid #00AED9; }
+    .plate-card.overdue { border: 1.5px solid #FF6B6B; border-left: 4px solid #FF6B6B; animation: pulse-border 1.4s ease-in-out infinite; }
+    @keyframes pulse-border { 0%,100%{box-shadow:none;}50%{box-shadow:0 0 0 5px rgba(255,107,107,0.15);} }
+    .plate-num { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; letter-spacing: 1.5px; color: #fff; margin-bottom: 6px; }
+    .plate-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 8px; }
+    .pb-avail { background: rgba(47,229,160,0.15); color: #2FE5A0; }
+    .pb-out { background: rgba(0,174,217,0.18); color: #00AED9; }
+    .pb-overdue { background: #FF6B6B; color: #fff; animation: flash 1.4s ease-in-out infinite; }
+    @keyframes flash { 0%,100%{opacity:1;}50%{opacity:0.55;} }
+    .plate-tech { font-size: 12px; font-weight: 500; color: #fff; }
+    .plate-empid { font-size: 11px; color: rgba(255,255,255,0.35); font-family: 'DM Mono', monospace; margin-top: 1px; }
+    .plate-elapsed { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 4px; }
+    .plate-overdue-txt { font-size: 11px; color: #FF6B6B; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 3px; }
+    .plate-action { margin-top: 10px; }
+    .btn-plate { width: 100%; padding: 8px; font-size: 12px; border-radius: 8px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px; transition: background 0.1s; }
+    .btn-plate-out { border: 1px solid #2FE5A0; background: transparent; color: #2FE5A0; }
+    .btn-plate-out:hover { background: rgba(47,229,160,0.1); }
+    .btn-plate-ret { border: 1px solid #00AED9; background: transparent; color: #00AED9; }
+    .btn-plate-ret:hover { background: rgba(0,174,217,0.1); }
+
+    /* ── SUCCESS ─────────────────────────────────────────────────── */
+    .success-body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center; background: #0D2240; }
+    .success-icon-wrap { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; }
+    .success-icon-wrap.green { background: rgba(47,229,160,0.15); }
+    .success-icon-wrap.blue { background: rgba(0,174,217,0.15); }
+    .success-icon-wrap i { font-size: 44px; }
+    .success-icon-wrap.green i { color: #2FE5A0; }
+    .success-icon-wrap.blue i { color: #00AED9; }
+    .success-title { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .success-sub { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; margin-bottom: 1.75rem; max-width: 320px; }
+    .success-card { background: rgba(255,255,255,0.06); border: 0.5px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 16px 28px; margin-bottom: 1.5rem; display: inline-block; }
+    .success-plate-num { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; letter-spacing: 2px; color: #fff; }
+    .success-assoc { font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+    .countdown-txt { font-size: 12px; color: rgba(255,255,255,0.3); }
+    .countdown-num { font-weight: 700; color: rgba(255,255,255,0.5); }
+
+    /* ── ADMIN ───────────────────────────────────────────────────── */
+    .admin-body { flex: 1; padding: 1.25rem 1.25rem 2rem; background: #0D2240; }
+    .admin-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
+    .admin-nav-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .save-indicator { font-size: 11px; color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 5px; }
+    .save-dot { width: 7px; height: 7px; border-radius: 50%; background: #2FE5A0; display: inline-block; }
+    .save-dot.saving { background: #EF9F27; animation: blink 0.6s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:0.3;} }
+    .card { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; }
+    .card-header { padding: 10px 16px; background: rgba(0,174,217,0.08); font-size: 11px; font-weight: 600; color: #00AED9; letter-spacing: 0.6px; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,174,217,0.15); }
+    .out-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid rgba(255,255,255,0.07); flex-wrap: wrap; gap: 4px; }
+    .out-row:last-child { border-bottom: none; }
+    .out-row.overdue-row { background: rgba(255,107,107,0.06); }
+    .out-plate-id { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #fff; min-width: 80px; }
+    .out-tech-name { font-size: 13px; color: #fff; flex: 1; padding: 0 10px; }
+    .out-tech-id { font-size: 11px; color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace; display: block; }
+    .out-meta { text-align: right; }
+    .out-elapsed { font-size: 11px; color: rgba(255,255,255,0.3); display: block; }
+    .out-overdue-tag { font-size: 11px; color: #FF6B6B; font-weight: 500; display: block; }
+    .none-out { padding: 14px 16px; font-size: 13px; color: rgba(255,255,255,0.4); }
+    .log-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
+    .log-count { font-size: 13px; color: rgba(255,255,255,0.4); }
+    .log-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; border: 0.5px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 5px; }
+    .btn-sm:hover { background: rgba(255,255,255,0.1); }
+    .btn-sm-blue { border-color: rgba(0,174,217,0.5); color: #00AED9; font-weight: 500; }
+    .btn-sm-blue:hover { background: rgba(0,174,217,0.1); }
+    .log-table-wrap { background: rgba(255,255,255,0.03); border: 0.5px solid rgba(255,255,255,0.08); border-radius: 12px; overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+    th { text-align: left; padding: 9px 10px; color: rgba(255,255,255,0.4); font-weight: 500; border-bottom: 0.5px solid rgba(255,255,255,0.08); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; background: rgba(0,174,217,0.05); }
+    td { padding: 9px 10px; border-bottom: 0.5px solid rgba(255,255,255,0.06); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; color: #fff; }
+    tr:last-child td { border-bottom: none; }
+    .log-note-row td { padding-top: 0 !important; padding-bottom: 9px !important; border-bottom: 0.5px solid rgba(255,255,255,0.06); }
+    .log-note-text { font-size: 11px; color: rgba(255,255,255,0.4); font-style: italic; white-space: normal; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; display: inline-block; font-weight: 500; }
+    .badge-signed-out { background: rgba(0,174,217,0.18); color: #00AED9; }
+    .badge-returned { background: rgba(47,229,160,0.15); color: #2FE5A0; }
+    .badge-overdue-ret { background: #FF6B6B; color: #fff; }
+    .shift-tag { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+    .shift-tag.s1 { background: rgba(0,174,217,0.18); color: #00AED9; }
+    .shift-tag.s2 { background: rgba(93,212,240,0.15); color: #5DD4F0; }
+    .empty-log { text-align: center; padding: 2.5rem; color: rgba(255,255,255,0.3); font-size: 13px; }
+    .export-notice { background: rgba(47,229,160,0.1); border: 0.5px solid rgba(47,229,160,0.3); border-radius: 10px; padding: 10px 14px; margin-bottom: 1rem; display: none; align-items: center; gap: 10px; font-size: 13px; color: #2FE5A0; }
+
+    /* ── MODALS ──────────────────────────────────────────────────── */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #0F2847; border: 0.5px solid rgba(0,174,217,0.25); border-radius: 18px; padding: 1.5rem; width: 100%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+    .modal-title { font-size: 17px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .modal-sub { font-size: 13px; color: rgba(255,255,255,0.45); margin-bottom: 1.25rem; line-height: 1.6; }
+    .form-field { margin-bottom: 14px; }
+    .form-label { font-size: 12px; color: rgba(255,255,255,0.5); display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-input, .form-textarea { width: 100%; padding: 10px 12px; font-size: 14px; border: 0.5px solid rgba(255,255,255,0.15); border-radius: 10px; background: rgba(255,255,255,0.06); color: #fff; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, box-shadow 0.15s; }
+    .form-textarea { resize: vertical; min-height: 76px; line-height: 1.5; }
+    .form-input:focus, .form-textarea:focus { outline: none; border-color: #00AED9; box-shadow: 0 0 0 3px rgba(0,174,217,0.15); }
+    .form-input.error, .form-textarea.error { border-color: #FF6B6B; }
+    .form-input::placeholder, .form-textarea::placeholder { color: rgba(255,255,255,0.25); }
+    .search-wrap { position: relative; margin-bottom: 5px; }
+    .search-wrap .form-input { padding-left: 36px; }
+    .search-icon-pos { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); font-size: 15px; pointer-events: none; }
+    .dropdown-list { border: 0.5px solid rgba(0,174,217,0.2); border-radius: 10px; max-height: 200px; overflow-y: auto; background: #0F2847; display: none; }
+    .dropdown-list.open { display: block; }
+    .dropdown-item { padding: 10px 12px; font-size: 13px; cursor: pointer; color: #fff; border-bottom: 0.5px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background 0.1s; }
+    .dropdown-item:last-child { border-bottom: none; }
+    .dropdown-item:hover { background: rgba(0,174,217,0.1); }
+    .dropdown-item.selected { background: rgba(0,174,217,0.15); }
+    .item-role-txt { font-size: 11px; color: rgba(255,255,255,0.35); }
+    .item-leave-tag { font-size: 10px; background: rgba(239,159,39,0.2); color: #EF9F27; padding: 1px 6px; border-radius: 10px; font-weight: 500; }
+    .item-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .no-results { padding: 14px; font-size: 13px; color: rgba(255,255,255,0.35); text-align: center; }
+    .selected-card { background: rgba(0,174,217,0.1); border: 0.5px solid rgba(0,174,217,0.2); border-radius: 10px; padding: 10px 12px; margin-top: 8px; }
+    .selected-card-name { font-size: 14px; font-weight: 600; color: #fff; }
+    .selected-card-meta { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+    .leave-note { font-size: 11px; color: #EF9F27; margin-top: 3px; display: none; }
+    .pin-error { font-size: 12px; color: #FF6B6B; margin-top: 6px; display: none; }
+    .pin-error.show { display: block; }
+    .section-divider { border: none; border-top: 0.5px solid rgba(255,255,255,0.1); margin: 14px 0; }
+    .overdue-section-label { font-size: 11px; font-weight: 600; color: #FF6B6B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 5px; }
+    .modal-footer { display: flex; gap: 8px; margin-top: 1.25rem; }
+    .btn-modal-cancel { flex: 1; padding: 11px; border-radius: 10px; border: 0.5px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.65); font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-modal-cancel:hover { background: rgba(255,255,255,0.1); }
+    .btn-modal-confirm { flex: 1; padding: 11px; border-radius: 10px; border: none; background: #00AED9; color: #fff; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-modal-confirm:hover { background: #00c5f5; }
+    .btn-modal-danger { flex: 1; padding: 11px; border-radius: 10px; border: none; background: #c0392b; color: #fff; font-size: 14px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; }
+    .btn-modal-danger:hover { background: #e74c3c; }
+
+    .loading-screen { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: rgba(255,255,255,0.4); font-size: 13px; }
+    @keyframes spin { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
+
+    @media (max-width: 580px) {
+      .wl-right { display: none; }
+      .wl-greeting { font-size: 21px; }
+      .wl-body { padding: 1.5rem; }
+      .plates-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="screen-loading" class="screen active">
+  <div class="loading-screen">
+    <i class="ti ti-loader" style="font-size:28px;animation:spin 1s linear infinite;color:#00AED9;"></i>
+    Loading kiosk data...
+  </div>
+</div>
+
+<!-- WELCOME -->
+<div id="screen-welcome" class="screen">
+  <div class="wl-bg">
+    <div class="wl-bg-dots"></div>
+    <div class="wl-bg-glow1"></div>
+    <div class="wl-bg-glow2"></div>
+  </div>
+  <div class="wl-header">
+    <div class="wl-brand">
+      <div class="wl-brand-icon"><i class="ti ti-license"></i></div>
+      <div>
+        <div class="wl-brand-name">Dealer Plate Sign-Out</div>
+        <div class="wl-brand-sub">Tolleson Post Production</div>
+      </div>
+    </div>
+    <div class="wl-header-right">
+      <span id="wl-pill" class="wl-shift-pill s1"><i class="ti ti-sun" style="font-size:11px;"></i>&nbsp;Shift 1</span>
+      <span class="wl-clock" id="wl-clock"></span>
+    </div>
+  </div>
+  <div class="wl-body">
+    <div class="wl-left">
+      <div class="wl-eyebrow">Carvana Tolleson</div>
+      <h1 class="wl-greeting">Greetings, I hope your<br><span>day is going well</span> so far!</h1>
+      <p class="wl-sub">Sign out a dealer plate before you leave the lot, and return it to this kiosk when you're done.</p>
+      <div class="wl-stats">
+        <div class="wl-stat"><div class="wl-stat-num green" id="wl-avail">—</div><div class="wl-stat-lbl">Available</div></div>
+        <div class="wl-stat"><div class="wl-stat-num blue" id="wl-out">—</div><div class="wl-stat-lbl">Signed out</div></div>
+        <div class="wl-stat"><div class="wl-stat-num red" id="wl-over">—</div><div class="wl-stat-lbl">Overdue</div></div>
+      </div>
+      <div class="wl-actions">
+        <button class="wl-btn-main" onclick="goTo('board')">
+          <i class="ti ti-license" style="font-size:18px;color:#ffffff;-webkit-text-fill-color:#ffffff;"></i>
+          <span style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-weight:700;">Sign out / Return a plate</span>
+        </button>
+        <button class="wl-btn-admin" onclick="promptAdminPin()">
+          <i class="ti ti-lock" style="font-size:14px;color:#ffffff;-webkit-text-fill-color:#ffffff;"></i>
+          <span style="color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-weight:600;">Admin view</span>
+        </button>
+      </div>
+    </div>
+    <div class="wl-right">
+      <svg width="160" height="340" viewBox="0 0 160 340" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="20" y="310" width="120" height="20" rx="4" fill="#00AED9" opacity="0.2"/>
+        <rect x="30" y="305" width="100" height="10" rx="3" fill="#00AED9" opacity="0.3"/>
+        <rect x="35" y="40" width="90" height="270" rx="6" fill="#0A1F3A" stroke="#00AED9" stroke-width="1.2" opacity="0.9"/>
+        <rect x="42" y="50" width="76" height="42" rx="3" fill="rgba(0,174,217,0.08)" stroke="#00AED9" stroke-width="0.8" opacity="0.7"/>
+        <rect x="46" y="57" width="30" height="28" rx="2" fill="rgba(0,174,217,0.12)"/><rect x="84" y="57" width="30" height="28" rx="2" fill="rgba(0,174,217,0.12)"/>
+        <rect x="48" y="68" width="26" height="10" rx="2" fill="#00AED9" opacity="0.4"/><circle cx="52" cy="79" r="3" fill="#00AED9" opacity="0.5"/><circle cx="70" cy="79" r="3" fill="#00AED9" opacity="0.5"/>
+        <rect x="86" y="68" width="26" height="10" rx="2" fill="#00AED9" opacity="0.3"/><circle cx="90" cy="79" r="3" fill="#00AED9" opacity="0.4"/><circle cx="108" cy="79" r="3" fill="#00AED9" opacity="0.4"/>
+        <rect x="42" y="100" width="76" height="42" rx="3" fill="rgba(0,174,217,0.06)" stroke="#00AED9" stroke-width="0.8" opacity="0.6"/>
+        <rect x="46" y="107" width="30" height="28" rx="2" fill="rgba(0,174,217,0.1)"/><rect x="84" y="107" width="30" height="28" rx="2" fill="rgba(0,174,217,0.15)"/>
+        <rect x="48" y="118" width="26" height="10" rx="2" fill="#00AED9" opacity="0.35"/><circle cx="52" cy="129" r="3" fill="#00AED9" opacity="0.45"/><circle cx="70" cy="129" r="3" fill="#00AED9" opacity="0.45"/>
+        <rect x="86" y="118" width="26" height="10" rx="2" fill="#2FE5A0" opacity="0.4"/><circle cx="90" cy="129" r="3" fill="#2FE5A0" opacity="0.5"/><circle cx="108" cy="129" r="3" fill="#2FE5A0" opacity="0.5"/>
+        <rect x="42" y="150" width="76" height="42" rx="3" fill="rgba(0,174,217,0.08)" stroke="#00AED9" stroke-width="0.8" opacity="0.7"/>
+        <rect x="46" y="157" width="30" height="28" rx="2" fill="rgba(0,174,217,0.12)"/><rect x="84" y="157" width="30" height="28" rx="2" fill="rgba(0,174,217,0.08)"/>
+        <rect x="48" y="168" width="26" height="10" rx="2" fill="#00AED9" opacity="0.5"/><circle cx="52" cy="179" r="3" fill="#00AED9" opacity="0.6"/><circle cx="70" cy="179" r="3" fill="#00AED9" opacity="0.6"/>
+        <rect x="86" y="168" width="26" height="10" rx="2" fill="#00AED9" opacity="0.3"/><circle cx="90" cy="179" r="3" fill="#00AED9" opacity="0.4"/><circle cx="108" cy="179" r="3" fill="#00AED9" opacity="0.4"/>
+        <rect x="42" y="200" width="76" height="42" rx="3" fill="rgba(0,174,217,0.06)" stroke="#00AED9" stroke-width="0.8" opacity="0.6"/>
+        <rect x="46" y="207" width="30" height="28" rx="2" fill="rgba(0,174,217,0.1)"/><rect x="84" y="207" width="30" height="28" rx="2" fill="rgba(0,174,217,0.14)"/>
+        <rect x="48" y="218" width="26" height="10" rx="2" fill="#FF6B6B" opacity="0.35"/><circle cx="52" cy="229" r="3" fill="#FF6B6B" opacity="0.45"/><circle cx="70" cy="229" r="3" fill="#FF6B6B" opacity="0.45"/>
+        <rect x="86" y="218" width="26" height="10" rx="2" fill="#00AED9" opacity="0.4"/><circle cx="90" cy="229" r="3" fill="#00AED9" opacity="0.5"/><circle cx="108" cy="229" r="3" fill="#00AED9" opacity="0.5"/>
+        <rect x="42" y="250" width="76" height="42" rx="3" fill="rgba(0,174,217,0.08)" stroke="#00AED9" stroke-width="0.8" opacity="0.7"/>
+        <rect x="46" y="257" width="30" height="28" rx="2" fill="rgba(0,174,217,0.12)"/><rect x="84" y="257" width="30" height="28" rx="2" fill="rgba(0,174,217,0.1)"/>
+        <rect x="48" y="268" width="26" height="10" rx="2" fill="#2FE5A0" opacity="0.4"/><circle cx="52" cy="279" r="3" fill="#2FE5A0" opacity="0.5"/><circle cx="70" cy="279" r="3" fill="#2FE5A0" opacity="0.5"/>
+        <rect x="86" y="268" width="26" height="10" rx="2" fill="#00AED9" opacity="0.35"/><circle cx="90" cy="279" r="3" fill="#00AED9" opacity="0.45"/><circle cx="108" cy="279" r="3" fill="#00AED9" opacity="0.45"/>
+        <line x1="35" y1="97" x2="125" y2="97" stroke="#00AED9" stroke-width="0.5" opacity="0.3"/>
+        <line x1="35" y1="147" x2="125" y2="147" stroke="#00AED9" stroke-width="0.5" opacity="0.3"/>
+        <line x1="35" y1="197" x2="125" y2="197" stroke="#00AED9" stroke-width="0.5" opacity="0.3"/>
+        <line x1="35" y1="247" x2="125" y2="247" stroke="#00AED9" stroke-width="0.5" opacity="0.3"/>
+        <line x1="80" y1="40" x2="80" y2="295" stroke="#00AED9" stroke-width="0.5" opacity="0.2"/>
+        <rect x="30" y="20" width="100" height="22" rx="4" fill="#00AED9" opacity="0.9"/>
+        <text x="80" y="35" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="700" fill="#0D2240">CARVANA</text>
+        <line x1="80" y1="20" x2="80" y2="8" stroke="#00AED9" stroke-width="1.5" opacity="0.6"/>
+        <circle cx="80" cy="6" r="3" fill="#00AED9" opacity="0.7"/>
+        <rect x="55" y="285" width="50" height="18" rx="2" fill="rgba(0,174,217,0.15)" stroke="#00AED9" stroke-width="0.8" opacity="0.6"/>
+        <line x1="80" y1="285" x2="80" y2="303" stroke="#00AED9" stroke-width="0.5" opacity="0.4"/>
+        <circle cx="60" cy="61" r="1.5" fill="#fff" opacity="0.6"/><circle cx="100" cy="111" r="1.5" fill="#fff" opacity="0.5"/>
+        <circle cx="60" cy="161" r="1.5" fill="#fff" opacity="0.7"/><circle cx="100" cy="211" r="1.5" fill="#fff" opacity="0.4"/>
+        <circle cx="60" cy="261" r="1.5" fill="#fff" opacity="0.6"/>
+      </svg>
+    </div>
+  </div>
+  <div class="wl-footer">
+    <span class="wl-footer-date" id="wl-date"></span>
+    <span class="wl-footer-tag">The new way to buy &amp; sell cars</span>
+  </div>
+</div>
+
+<!-- BOARD -->
+<div id="screen-board" class="screen">
+  <div class="app-bar">
+    <div class="app-bar-brand">
+      <div class="app-bar-icon"><i class="ti ti-license"></i></div>
+      <div><div class="app-bar-name">Select a Plate</div><div class="app-bar-sub">Tap to sign out or return</div></div>
+    </div>
+    <div class="app-bar-right">
+      <span id="board-pill" class="shift-badge s1"></span>
+      <span class="clock-txt" id="board-clock"></span>
+    </div>
+  </div>
+  <div class="board-body">
+    <div class="board-nav">
+      <button class="btn-back" onclick="goTo('welcome')"><i class="ti ti-arrow-left" style="font-size:13px;"></i> Home</button>
+    </div>
+    <div id="overdue-alert" class="overdue-alert">
+      <i class="ti ti-alert-triangle"></i>
+      <div class="overdue-alert-text" id="overdue-alert-text"></div>
+    </div>
+    <div class="plates-grid" id="plates-grid"></div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div id="screen-success" class="screen">
+  <div class="app-bar">
+    <div class="app-bar-brand">
+      <div class="app-bar-icon"><i class="ti ti-license"></i></div>
+      <div><div class="app-bar-name">Dealer Plate Sign-Out</div><div class="app-bar-sub">Tolleson Post Production</div></div>
+    </div>
+  </div>
+  <div class="success-body">
+    <div class="success-icon-wrap" id="success-icon-wrap"><i class="ti ti-circle-check" id="success-icon"></i></div>
+    <h2 class="success-title" id="success-title"></h2>
+    <p class="success-sub" id="success-sub"></p>
+    <div class="success-card">
+      <div class="success-plate-num" id="success-plate"></div>
+      <div class="success-assoc" id="success-assoc"></div>
+    </div>
+    <p class="countdown-txt">Returning to home in <span class="countdown-num" id="countdown-num">5</span>s</p>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" class="screen">
+  <div class="app-bar">
+    <div class="app-bar-brand">
+      <div class="app-bar-icon"><i class="ti ti-license"></i></div>
+      <div><div class="app-bar-name">Admin View</div><div class="app-bar-sub">Tolleson Post Production</div></div>
+    </div>
+    <div class="app-bar-right">
+      <div class="save-indicator"><span class="save-dot" id="save-dot"></span><span id="save-label">All saved</span></div>
+    </div>
+  </div>
+  <div class="admin-body">
+    <div class="admin-nav">
+      <button class="btn-back" onclick="goTo('welcome')"><i class="ti ti-arrow-left" style="font-size:13px;"></i> Home</button>
+      <div class="admin-nav-right">
+        <button class="btn-sm" onclick="showChangePinModal()"><i class="ti ti-lock" style="font-size:13px;"></i> Change PIN</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="ti ti-clock" style="font-size:12px;vertical-align:-1px;margin-right:5px;"></i>Currently signed out</div>
+      <div id="currently-out-body"></div>
+    </div>
+    <div class="log-toolbar">
+      <span class="log-count" id="log-count">0 events</span>
+      <div class="log-actions">
+        <button class="btn-sm btn-sm-blue" id="btn-export" onclick="exportCSV()"><i class="ti ti-table-export" style="font-size:13px;"></i> Download CSV</button>
+        <button class="btn-sm" onclick="showClearConfirm()"><i class="ti ti-trash" style="font-size:13px;"></i> Clear log</button>
+      </div>
+    </div>
+    <div id="export-notice" class="export-notice"><i class="ti ti-circle-check" style="font-size:16px;"></i> CSV downloaded — ready to send to your Dealer Plates Management team.</div>
+    <div class="log-table-wrap">
+      <table>
+        <colgroup><col style="width:13%"><col style="width:21%"><col style="width:10%"><col style="width:17%"><col style="width:13%"><col style="width:14%"><col style="width:12%"></colgroup>
+        <thead><tr><th>Plate</th><th>Associate</th><th>Emp ID</th><th>Action</th><th>Shift</th><th>Time</th><th>Role</th></tr></thead>
+        <tbody id="log-body"></tbody>
+      </table>
+      <div id="log-empty" class="empty-log"><i class="ti ti-history" style="font-size:22px;display:block;margin-bottom:8px;"></i>No activity yet</div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="modal-checkout">
+  <div class="modal-box">
+    <h2 class="modal-title" id="co-title">Sign out plate</h2>
+    <p class="modal-sub">Select your name to check out this plate.</p>
+    <div class="form-field">
+      <label class="form-label">Search your name *</label>
+      <div class="search-wrap">
+        <i class="ti ti-search search-icon-pos"></i>
+        <input type="text" class="form-input" id="search-input" placeholder="Type name to search..." autocomplete="off" oninput="filterDropdown()" onfocus="openDropdown()" />
+      </div>
+      <div class="dropdown-list" id="dropdown-list"></div>
+    </div>
+    <div id="sel-card" style="display:none;" class="selected-card">
+      <div class="selected-card-name" id="sel-name"></div>
+      <div class="selected-card-meta"><span id="sel-role"></span> · ID: <span id="sel-empid"></span> · <span id="sel-shift"></span></div>
+      <div id="sel-leave" class="leave-note"><i class="ti ti-info-circle" style="font-size:11px;vertical-align:-1px;"></i> Currently on leave</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-modal-confirm" onclick="confirmCheckout()"><i class="ti ti-arrow-bar-up" style="font-size:14px;"></i> Sign out plate</button>
+    </div>
+  </div>
+</div>
+
+<!-- RETURN MODAL -->
+<div class="modal-overlay" id="modal-return">
+  <div class="modal-box">
+    <h2 class="modal-title" id="ret-title">Return plate</h2>
+    <p class="modal-sub" id="ret-sub"></p>
+    <div class="selected-card" style="margin-bottom:14px;">
+      <div class="selected-card-name" id="ret-name"></div>
+      <div class="selected-card-meta">ID: <span id="ret-empid"></span></div>
+    </div>
+    <div id="overdue-note-section" style="display:none;">
+      <hr class="section-divider">
+      <div class="overdue-section-label"><i class="ti ti-alert-triangle" style="font-size:13px;"></i> Overdue — reason required</div>
+      <div class="form-field" style="margin-top:8px;">
+        <label class="form-label">Why was this plate not returned before shift end? *</label>
+        <textarea class="form-textarea" id="overdue-note" placeholder="e.g. Customer test drive ran long, vehicle stuck in queue..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-modal-confirm" onclick="confirmReturn()"><i class="ti ti-arrow-bar-down" style="font-size:14px;"></i> Confirm return</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PIN MODAL -->
+<div class="modal-overlay" id="modal-admin-pin">
+  <div class="modal-box">
+    <h2 class="modal-title">Admin access</h2>
+    <p class="modal-sub">Enter the 4-digit PIN to access the admin view.</p>
+    <div class="form-field"><input type="password" class="form-input" id="admin-pin-input" maxlength="4" placeholder="Enter PIN" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
+    <div class="pin-error" id="admin-pin-error">Incorrect PIN. Please try again.</div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-modal-confirm" onclick="confirmAdminPin()">Enter</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR LOG MODAL -->
+<div class="modal-overlay" id="modal-clear">
+  <div class="modal-box">
+    <h2 class="modal-title">Clear activity log?</h2>
+    <p class="modal-sub">This permanently deletes all sign-out history and cannot be undone. Enter PIN to confirm.</p>
+    <div class="form-field"><input type="password" class="form-input" id="clear-pin" maxlength="4" placeholder="Enter PIN" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
+    <div class="pin-error" id="clear-pin-error">Incorrect PIN. Please try again.</div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-modal-danger" onclick="confirmClear()">Clear all history</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PIN MODAL -->
+<div class="modal-overlay" id="modal-pin">
+  <div class="modal-box">
+    <h2 class="modal-title">Change PIN</h2>
+    <p class="modal-sub">This PIN protects both admin access and log clearing.</p>
+    <div class="form-field"><label class="form-label">Current PIN</label><input type="password" class="form-input" id="pin-current" maxlength="4" placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
+    <div class="form-field"><label class="form-label">New PIN</label><input type="password" class="form-input" id="pin-new" maxlength="4" placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
+    <div class="form-field"><label class="form-label">Confirm new PIN</label><input type="password" class="form-input" id="pin-confirm" maxlength="4" placeholder="••••" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
+    <div class="pin-error" id="pin-change-error"></div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-modal-confirm" onclick="confirmPinChange()">Update PIN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const PLATES = ['04H7DL','78H1DL','EDLY26','EDLY15','EDLY25','69C4DL','EDLY27'];
+const ROSTER = [
+  {name:"Abel Nava",role:"Quality Associate",shift:"Shift 1",empId:"27446",onLeave:false},
+  {name:"Abraham Soto Garcia",role:"Inventory Associate I",shift:"Shift 1",empId:"141319",onLeave:false},
+  {name:"Adam Gaines",role:"Technician III",shift:"Shift 1",empId:"124315",onLeave:false},
+  {name:"Averien Turner Jr.",role:"Inventory Associate I",shift:"Shift 1",empId:"139232",onLeave:false},
+  {name:"Axel Lopez",role:"Sublet Coordinator",shift:"Shift 1",empId:"26724",onLeave:false},
+  {name:"Brandon Menno",role:"Technician III",shift:"Shift 2",empId:"148126",onLeave:false},
+  {name:"Brandon Smitherman",role:"Quality Associate",shift:"Shift 2",empId:"116357",onLeave:false},
+  {name:"Brian Garcia",role:"Technician I",shift:"Shift 3",empId:"85775",onLeave:false},
+  {name:"Candice Ray",role:"Assoc. General Manager",shift:"—",empId:"134732",onLeave:false},
+  {name:"Carlos Lemus Hernandez",role:"Quality Associate",shift:"Shift 1",empId:"84257",onLeave:false},
+  {name:"Cedric Dent",role:"Inventory Associate I",shift:"Shift 2",empId:"151855",onLeave:false},
+  {name:"Chelsea Montoya",role:"Inventory Associate II",shift:"Shift 1",empId:"28314",onLeave:false},
+  {name:"Chris Lopez",role:"Manager",shift:"Shift 1",empId:"15537",onLeave:false},
+  {name:"Delfino Ortega",role:"Lead",shift:"Shift 1",empId:"23289",onLeave:false},
+  {name:"Edgar Breceda",role:"Inventory Associate I",shift:"Shift 1",empId:"147967",onLeave:false},
+  {name:"Eddie Lumbreras",role:"Inventory Associate II",shift:"Shift 1",empId:"133850",onLeave:false},
+  {name:"Emilio Armenta",role:"Inventory Associate I",shift:"Shift 1",empId:"114824",onLeave:false},
+  {name:"Enrique Aguilera",role:"Quality Associate",shift:"Shift 1",empId:"28620",onLeave:false},
+  {name:"Erik Vasallo",role:"Technician II",shift:"Shift 3",empId:"116620",onLeave:false},
+  {name:"Florena Subaderun",role:"Inventory Associate I",shift:"Shift 2",empId:"108211",onLeave:false},
+  {name:"James Parsons",role:"Technician III",shift:"Shift 1",empId:"13165",onLeave:false},
+  {name:"Jason Medeiros",role:"Technician III",shift:"Shift 1",empId:"18023",onLeave:false},
+  {name:"Joel Saari",role:"Technician II",shift:"Shift 1",empId:"16843",onLeave:false},
+  {name:"Joel Warne",role:"Technician III",shift:"Shift 3",empId:"22176",onLeave:false},
+  {name:"John Garrison",role:"Technician III",shift:"Shift 2",empId:"16716",onLeave:false},
+  {name:"John Kalu",role:"Technician II",shift:"Shift 1",empId:"59345",onLeave:false},
+  {name:"Kaleb Gonzales",role:"Inventory Associate I",shift:"Shift 1",empId:"27068",onLeave:false},
+  {name:"Larry Lawrence",role:"Technician III",shift:"Shift 1",empId:"23404",onLeave:false},
+  {name:"Louie Cordova",role:"Inventory Associate I",shift:"Shift 2",empId:"133471",onLeave:false},
+  {name:"Marcelino Garza",role:"Technician II",shift:"Shift 2",empId:"130523",onLeave:false},
+  {name:"Maverick Sponsel",role:"Technician II",shift:"Shift 1",empId:"130061",onLeave:false},
+  {name:"Mitchell McVay",role:"Technician II",shift:"Shift 2",empId:"13130",onLeave:false},
+  {name:"Pete Sandoval",role:"Lead",shift:"Shift 2",empId:"23670",onLeave:false},
+  {name:"Steven Carlson",role:"Inventory Associate I",shift:"Shift 1",empId:"105679",onLeave:true},
+  {name:"Victor Mondragon",role:"Inventory Associate I",shift:"Shift 3",empId:"105639",onLeave:false}
+];
+
+let plates={}, log=[], supervisorPin='0122', selectedAssociate=null, activePlate=null, saveTimeout=null, countdownInterval=null, currentScreen='loading';
+PLATES.forEach(id=>{plates[id]={status:'available',tech:null,role:null,empId:null,since:null};});
+
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
+function loadData(){
+  try{
+    const ps=lsGet('dp-plates'); if(ps){const s=JSON.parse(ps);PLATES.forEach(id=>{if(s[id])plates[id]=s[id];});}
+    const lg=lsGet('dp-log'); if(lg)log=JSON.parse(lg);
+    const pin=lsGet('dp-pin'); if(pin)supervisorPin=pin;
+  }catch(e){}
+  document.getElementById('screen-loading').classList.remove('active');
+  goTo('welcome');
+}
+
+function saveData(){
+  const dot=document.getElementById('save-dot'),lbl=document.getElementById('save-label');
+  dot.classList.add('saving');lbl.textContent='Saving...';
+  try{lsSet('dp-plates',JSON.stringify(plates));lsSet('dp-log',JSON.stringify(log));dot.classList.remove('saving');lbl.textContent='All saved';}
+  catch(e){dot.classList.remove('saving');lbl.textContent='Save failed';}
+}
+function scheduleSave(){clearTimeout(saveTimeout);saveTimeout=setTimeout(saveData,600);}
+
+function getShiftInfo(ts){const d=new Date(ts),h=d.getHours()+d.getMinutes()/60;if(h>=6&&h<15)return{name:'Shift 1',end:15};if(h>=16||h<3)return{name:'Shift 2',end:27};return null;}
+function getShiftEndTime(since){const co=new Date(since),shift=getShiftInfo(since);if(!shift)return null;const end=new Date(co);if(shift.end===15){end.setHours(15,0,0,0);if(end<=co)end.setDate(end.getDate()+1);}else{end.setHours(3,0,0,0);end.setDate(end.getDate()+1);if(end<=co)end.setDate(end.getDate()+1);}return end;}
+function isOverdue(since){if(!since)return false;const e=getShiftEndTime(since);return e?Date.now()>e:false;}
+function overdueFor(since){const e=getShiftEndTime(since);if(!e)return '';const d=Math.floor((Date.now()-e)/60000);if(d<1)return 'just now';if(d<60)return d+'m overdue';return Math.floor(d/60)+'h '+(d%60)+'m overdue';}
+function elapsed(ts){const d=Math.floor((Date.now()-ts)/60000);if(d<1)return 'just now';if(d<60)return d+'m ago';return Math.floor(d/60)+'h '+(d%60)+'m ago';}
+function fmtShort(ts){const d=new Date(ts);return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' · '+d.toLocaleDateString([],{month:'short',day:'numeric'});}
+function fmtFull(ts){return new Date(ts).toLocaleString([],{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+
+function updateShiftPill(id,large){
+  const el=document.getElementById(id); if(!el)return;
+  const shift=getShiftInfo(Date.now());
+  if(!shift){el.className=large?'wl-shift-pill btwn':'shift-badge btwn';el.textContent='Between shifts';}
+  else if(shift.name==='Shift 1'){el.className=large?'wl-shift-pill s1':'shift-badge s1';el.innerHTML='<i class="ti ti-sun" style="font-size:11px;"></i>&nbsp;Shift 1 · Ends 3 PM';}
+  else{el.className=large?'wl-shift-pill s2':'shift-badge s2';el.innerHTML='<i class="ti ti-moon" style="font-size:11px;"></i>&nbsp;Shift 2 · Ends 3 AM';}
+}
+
+function goTo(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  currentScreen=screen; clearCountdown();
+  if(screen==='welcome')updateWelcome();
+  if(screen==='board'){renderGrid();updateShiftPill('board-pill',false);document.getElementById('board-clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+  if(screen==='admin')renderAdmin();
+}
+
+function updateWelcome(){
+  const out=PLATES.filter(id=>plates[id].status==='out').length;
+  const ov=PLATES.filter(id=>plates[id].status==='out'&&isOverdue(plates[id].since)).length;
+  document.getElementById('wl-avail').textContent=PLATES.length-out;
+  document.getElementById('wl-out').textContent=out;
+  document.getElementById('wl-over').textContent=ov;
+  updateShiftPill('wl-pill',true);
+  const now=new Date();
+  document.getElementById('wl-clock').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('wl-date').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+}
+
+function renderGrid(){
+  const grid=document.getElementById('plates-grid'); grid.innerHTML='';
+  const op=PLATES.filter(id=>plates[id].status==='out'&&isOverdue(plates[id].since));
+  const alert=document.getElementById('overdue-alert');
+  if(op.length>0){alert.style.display='flex';document.getElementById('overdue-alert-text').innerHTML=`<strong>${op.length} plate${op.length>1?'s':''} not returned before shift end:</strong> ${op.map(id=>`<strong>${id}</strong> (${plates[id].tech})`).join(', ')}. Follow up to confirm location.`;}
+  else{alert.style.display='none';}
+  PLATES.forEach(id=>{
+    const p=plates[id],avail=p.status==='available',overdue=!avail&&isOverdue(p.since);
+    const card=document.createElement('div');
+    card.className='plate-card '+(avail?'available':overdue?'overdue':'checked-out');
+    const bc=avail?'pb-avail':overdue?'pb-overdue':'pb-out';
+    const bt=avail?'Available':overdue?'⚠ Overdue':'Signed out';
+    card.innerHTML=`<div class="plate-num">${id}</div><span class="plate-badge ${bc}">${bt}</span>
+      ${!avail?`<div class="plate-tech">${p.tech||''}</div><div class="plate-empid">ID: ${p.empId||'—'}</div>`:'<div class="plate-tech" style="color:rgba(255,255,255,0.35);">Ready for use</div>'}
+      ${!avail&&!overdue?`<div class="plate-elapsed">${elapsed(p.since)}</div>`:''}
+      ${overdue?`<div class="plate-overdue-txt"><i class="ti ti-clock-exclamation" style="font-size:12px;"></i>${overdueFor(p.since)}</div>`:''}
+      <div class="plate-action">${avail
+        ?`<button class="btn-plate btn-plate-out" onclick="openCheckout('${id}')"><i class="ti ti-arrow-bar-up" style="font-size:12px;"></i> Sign out</button>`
+        :`<button class="btn-plate btn-plate-ret" onclick="openReturn('${id}')"><i class="ti ti-arrow-bar-down" style="font-size:12px;"></i> Return</button>`
+      }</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function showSuccess(type,plateId,techName){
+  const isOut=type==='out';
+  const wrap=document.getElementById('success-icon-wrap'); wrap.className='success-icon-wrap '+(isOut?'green':'blue');
+  document.getElementById('success-icon').className='ti ti-'+(isOut?'circle-check':'home-check');
+  document.getElementById('success-title').textContent=isOut?'Plate signed out!':'Plate returned!';
+  document.getElementById('success-sub').textContent=isOut?'Remember to return this plate before the end of your shift.':'Thanks for returning the plate. Have a great rest of your shift!';
+  document.getElementById('success-plate').textContent=plateId;
+  document.getElementById('success-assoc').textContent=techName;
+  goTo('success');
+  let c=5; document.getElementById('countdown-num').textContent=c;
+  countdownInterval=setInterval(()=>{c--;document.getElementById('countdown-num').textContent=c;if(c<=0){clearCountdown();goTo('welcome');}},1000);
+}
+function clearCountdown(){if(countdownInterval){clearInterval(countdownInterval);countdownInterval=null;}}
+
+function renderAdmin(){
+  const op=PLATES.filter(id=>plates[id].status==='out');
+  document.getElementById('currently-out-body').innerHTML=op.length===0?'<div class="none-out">All plates are currently in.</div>'
+    :op.map(id=>{const p=plates[id],over=isOverdue(p.since);return `<div class="out-row ${over?'overdue-row':''}"><span class="out-plate-id">${id}</span><span class="out-tech-name">${p.tech}<span class="out-tech-id">ID: ${p.empId||'—'}</span></span><div class="out-meta"><span class="out-elapsed">${elapsed(p.since)}</span>${over?`<span class="out-overdue-tag"><i class="ti ti-alert-triangle" style="font-size:11px;vertical-align:-1px;"></i> ${overdueFor(p.since)}</span>`:''}</div></div>`;}).join('');
+  const tbody=document.getElementById('log-body'),empty=document.getElementById('log-empty');
+  document.getElementById('log-count').textContent=log.length+' event'+(log.length!==1?'s':'');
+  const btn=document.getElementById('btn-export'); btn.disabled=log.length===0; btn.style.opacity=log.length===0?'0.4':'1';
+  if(log.length===0){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=[...log].reverse().map(e=>{
+    const shift=getShiftInfo(e.ts),sl=shift?shift.name:'—',sc=shift?(shift.name==='Shift 1'?'s1':'s2'):'';
+    const ab=e.action==='out'?`<span class="badge badge-signed-out">Signed out</span>`:e.action==='overdue'?`<span class="badge badge-overdue-ret">Overdue return</span>`:`<span class="badge badge-returned">Returned</span>`;
+    return `<tr${e.note?' class="has-note"':''}><td style="font-family:'DM Mono',monospace;font-size:11px;font-weight:500;">${e.plate}</td><td style="font-size:12px;">${e.tech}</td><td style="font-family:'DM Mono',monospace;font-size:11px;color:rgba(255,255,255,0.35);">${e.empId||'—'}</td><td>${ab}</td><td><span class="shift-tag ${sc}">${sl}</span></td><td style="color:rgba(255,255,255,0.35);font-size:11px;">${fmtShort(e.ts)}</td><td style="color:rgba(255,255,255,0.3);font-size:10px;">${e.role||'—'}</td></tr>${e.note?`<tr class="log-note-row"><td colspan="7"><span class="log-note-text"><i class="ti ti-message" style="font-size:11px;vertical-align:-1px;margin-right:4px;"></i>${e.note}</span></td></tr>`:''}`;
+  }).join('');
+}
+
+function buildDropdown(filter){
+  const list=document.getElementById('dropdown-list'),q=(filter||'').toLowerCase();
+  const filtered=ROSTER.filter(a=>a.name.toLowerCase().includes(q)||a.empId.includes(q));
+  if(filtered.length===0){list.innerHTML='<div class="no-results">No associates found</div>';return;}
+  list.innerHTML=filtered.map(a=>`<div class="dropdown-item ${selectedAssociate&&selectedAssociate.empId===a.empId?'selected':''}" onclick="selectAssociate('${a.empId}')"><span>${a.name}</span><span class="item-right">${a.onLeave?'<span class="item-leave-tag">On leave</span>':''}<span class="item-role-txt">${a.role}</span></span></div>`).join('');
+}
+function openDropdown(){document.getElementById('dropdown-list').classList.add('open');buildDropdown(document.getElementById('search-input').value);}
+function filterDropdown(){buildDropdown(document.getElementById('search-input').value);document.getElementById('dropdown-list').classList.add('open');if(document.getElementById('search-input').value!==(selectedAssociate?selectedAssociate.name:'')){selectedAssociate=null;document.getElementById('sel-card').style.display='none';}}
+function selectAssociate(empId){
+  selectedAssociate=ROSTER.find(a=>a.empId===empId);
+  document.getElementById('search-input').value=selectedAssociate.name;
+  document.getElementById('dropdown-list').classList.remove('open');
+  document.getElementById('search-input').classList.remove('error');
+  document.getElementById('sel-name').textContent=selectedAssociate.name;
+  document.getElementById('sel-role').textContent=selectedAssociate.role;
+  document.getElementById('sel-empid').textContent=selectedAssociate.empId;
+  document.getElementById('sel-shift').textContent=selectedAssociate.shift;
+  document.getElementById('sel-leave').style.display=selectedAssociate.onLeave?'block':'none';
+  document.getElementById('sel-card').style.display='block';
+}
+function openCheckout(id){activePlate=id;selectedAssociate=null;document.getElementById('co-title').textContent='Sign out '+id;document.getElementById('search-input').value='';document.getElementById('search-input').classList.remove('error');document.getElementById('dropdown-list').classList.remove('open');document.getElementById('sel-card').style.display='none';document.getElementById('modal-checkout').classList.add('open');setTimeout(()=>document.getElementById('search-input').focus(),80);}
+function openReturn(id){activePlate=id;const p=plates[id],over=isOverdue(p.since);document.getElementById('ret-title').textContent='Return '+id;document.getElementById('ret-sub').textContent=over?'⚠ This plate is overdue. A reason is required.':'Confirm the return of this plate.';document.getElementById('ret-name').textContent=p.tech;document.getElementById('ret-empid').textContent=p.empId||'—';document.getElementById('overdue-note-section').style.display=over?'block':'none';if(over){document.getElementById('overdue-note').value='';document.getElementById('overdue-note').classList.remove('error');}document.getElementById('modal-return').classList.add('open');}
+function confirmCheckout(){
+  if(!selectedAssociate){document.getElementById('search-input').classList.add('error');document.getElementById('search-input').focus();return;}
+  const ts=Date.now(),shift=getShiftInfo(ts);
+  if(!shift){if(!confirm('Plate is being signed out between shifts. Continue?'))return;}
+  plates[activePlate]={status:'out',tech:selectedAssociate.name,role:selectedAssociate.role,empId:selectedAssociate.empId,since:ts};
+  log.push({plate:activePlate,tech:selectedAssociate.name,role:selectedAssociate.role,empId:selectedAssociate.empId,action:'out',ts,note:''});
+  const name=selectedAssociate.name; closeModals(); scheduleSave(); showSuccess('out',activePlate,name);
+}
+function confirmReturn(){
+  const p=plates[activePlate],over=isOverdue(p.since);
+  if(over){const note=document.getElementById('overdue-note').value.trim();if(!note){document.getElementById('overdue-note').classList.add('error');document.getElementById('overdue-note').focus();return;}document.getElementById('overdue-note').classList.remove('error');log.push({plate:activePlate,tech:p.tech,role:p.role,empId:p.empId,action:'overdue',ts:Date.now(),note});}
+  else{log.push({plate:activePlate,tech:p.tech,role:p.role,empId:p.empId,action:'ret',ts:Date.now(),note:''});}
+  const name=p.tech,pid=activePlate; plates[activePlate]={status:'available',tech:null,role:null,empId:null,since:null};
+  closeModals(); scheduleSave(); showSuccess('ret',pid,name);
+}
+function promptAdminPin(){document.getElementById('admin-pin-input').value='';document.getElementById('admin-pin-error').classList.remove('show');document.getElementById('modal-admin-pin').classList.add('open');setTimeout(()=>document.getElementById('admin-pin-input').focus(),80);}
+function confirmAdminPin(){if(document.getElementById('admin-pin-input').value!==supervisorPin){document.getElementById('admin-pin-error').classList.add('show');document.getElementById('admin-pin-input').value='';document.getElementById('admin-pin-input').focus();return;}closeModals();goTo('admin');}
+function showClearConfirm(){document.getElementById('clear-pin').value='';document.getElementById('clear-pin-error').classList.remove('show');document.getElementById('modal-clear').classList.add('open');setTimeout(()=>document.getElementById('clear-pin').focus(),80);}
+function confirmClear(){if(document.getElementById('clear-pin').value!==supervisorPin){document.getElementById('clear-pin-error').classList.add('show');document.getElementById('clear-pin').value='';document.getElementById('clear-pin').focus();return;}log=[];lsSet('dp-log',JSON.stringify(log));closeModals();renderAdmin();}
+function showChangePinModal(){['pin-current','pin-new','pin-confirm'].forEach(id=>document.getElementById(id).value='');document.getElementById('pin-change-error').classList.remove('show');document.getElementById('modal-pin').classList.add('open');}
+function confirmPinChange(){const cur=document.getElementById('pin-current').value,nw=document.getElementById('pin-new').value,cf=document.getElementById('pin-confirm').value,err=document.getElementById('pin-change-error');if(cur!==supervisorPin){err.textContent='Current PIN is incorrect.';err.classList.add('show');return;}if(nw.length!==4){err.textContent='New PIN must be 4 digits.';err.classList.add('show');return;}if(nw!==cf){err.textContent='New PINs do not match.';err.classList.add('show');return;}supervisorPin=nw;lsSet('dp-pin',nw);closeModals();alert('PIN updated successfully.');}
+function exportCSV(){
+  if(log.length===0)return;
+  const headers=['Plate Number','Associate','Employee ID','Role','Action','Shift','Date & Time','Overdue Note'];
+  const rows=log.map(e=>{const shift=getShiftInfo(e.ts);const action=e.action==='out'?'Signed Out':e.action==='overdue'?'Overdue Return':'Returned';return[e.plate,e.tech,e.empId||'',e.role||'',action,shift?shift.name:'—',fmtFull(e.ts),e.note||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',');});
+  const p1=new Date(log[0].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
+  const p2=new Date(log[log.length-1].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
+  const meta=['"Dealer Plate Sign-Out Log — Tolleson Post Production"','"Period: '+p1+' – '+p2+'"','"Generated: '+new Date().toLocaleString()+'"',''];
+  const csv=meta.join('\n')+headers.map(h=>'"'+h+'"').join(',')+'\n'+rows.join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='dealer-plate-log-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  const notice=document.getElementById('export-notice');notice.style.display='flex';setTimeout(()=>notice.style.display='none',5000);
+}
+function closeModals(){document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));document.getElementById('dropdown-list').classList.remove('open');}
+
+document.addEventListener('click',e=>{
+  const list=document.getElementById('dropdown-list'),si=document.getElementById('search-input');
+  if(!list.contains(e.target)&&e.target!==si)list.classList.remove('open');
+  document.querySelectorAll('.modal-overlay').forEach(m=>{if(e.target===m)closeModals();});
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')closeModals();
+  if(e.key==='Enter'){
+    if(document.getElementById('modal-checkout').classList.contains('open'))confirmCheckout();
+    if(document.getElementById('modal-admin-pin').classList.contains('open'))confirmAdminPin();
+    if(document.getElementById('modal-clear').classList.contains('open'))confirmClear();
+  }
+});
+setInterval(()=>{
+  if(currentScreen==='welcome')updateWelcome();
+  if(currentScreen==='board'){renderGrid();updateShiftPill('board-pill',false);}
+  if(currentScreen==='admin')renderAdmin();
+},30000);
+
+loadData();
+</script>
+</body>
+</html>
