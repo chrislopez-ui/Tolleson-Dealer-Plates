@@ -14,9 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -415,18 +413,8 @@
 </style>
 
 <script>
-// ── FIREBASE CONFIG ────────────────────────────────────────────────────────────
-var firebaseConfig = {
-  apiKey: "AIzaSyASo9Hvs2lN6WAHRYf7JYoouD8YOMh-XDk",
-  authDomain: "tolleson-pp-plate-kiosk.firebaseapp.com",
-  databaseURL: "https://tolleson-pp-plate-kiosk-default-rtdb.firebaseio.com",
-  projectId: "tolleson-pp-plate-kiosk",
-  storageBucket: "tolleson-pp-plate-kiosk.firebasestorage.app",
-  messagingSenderId: "44363650073",
-  appId: "1:44363650073:web:95b9845dbc0d5111c84688"
-};
-firebase.initializeApp(firebaseConfig);
-var db = firebase.database();
+// db is initialised after Firebase SDKs load at the bottom of this file
+var db = null;
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 var PLATES = ['04H7DL','78H1DL','EDLY26','EDLY15','EDLY25','69C4DL','EDLY27'];
@@ -835,7 +823,25 @@ document.addEventListener('keydown', function(e){
 // ── INIT ───────────────────────────────────────────────────────────────────────
 updateHeader();
 setInterval(function(){ render(); updateHeader(); }, 30000);
-initFirebase();
+</script>
+
+<!-- Firebase SDKs loaded at end of body to ensure DOM is ready -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  // Init Firebase after SDKs are fully loaded
+  var firebaseConfig2 = {
+    apiKey: "AIzaSyASo9Hvs2lN6WAHRYf7JYoouD8YOMh-XDk",
+    authDomain: "tolleson-pp-plate-kiosk.firebaseapp.com",
+    databaseURL: "https://tolleson-pp-plate-kiosk-default-rtdb.firebaseio.com",
+    projectId: "tolleson-pp-plate-kiosk",
+    storageBucket: "tolleson-pp-plate-kiosk.firebasestorage.app",
+    messagingSenderId: "44363650073",
+    appId: "1:44363650073:web:95b9845dbc0d5111c84688"
+  };
+  if(!firebase.apps.length){ firebase.initializeApp(firebaseConfig2); }
+  db = firebase.database();
+  initFirebase();
 </script>
 </body>
 </html>
