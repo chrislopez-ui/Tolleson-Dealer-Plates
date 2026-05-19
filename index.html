@@ -13,14 +13,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css" />
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
     body { background: #0D2240; color: #fff; min-height: 100vh; display: flex; flex-direction: column; }
+
     .bg { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
     .bg-dots { position: absolute; inset: 0; background-image: radial-gradient(circle, rgba(0,174,217,0.1) 1px, transparent 1px); background-size: 28px 28px; }
     .bg-glow1 { position: absolute; width: 600px; height: 400px; background: #00AED9; opacity: 0.05; border-radius: 50%; top: -150px; right: -120px; }
     .bg-glow2 { position: absolute; width: 350px; height: 350px; background: #00AED9; opacity: 0.04; border-radius: 50%; bottom: -120px; left: -80px; }
+
+    /* SYNC INDICATOR */
+    .sync-bar { position: relative; z-index: 2; background: rgba(0,174,217,0.1); border-bottom: 0.5px solid rgba(0,174,217,0.2); padding: 6px 22px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(255,255,255,0.5); flex-shrink: 0; }
+    .sync-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sync-dot.connected { background: #2FE5A0; }
+    .sync-dot.connecting { background: #EF9F27; animation: blink 0.8s ease-in-out infinite; }
+    .sync-dot.error { background: #FF6B6B; }
+    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:0.2;} }
 
     /* HEADER */
     .header { position: relative; z-index: 1; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-bottom: 0.5px solid rgba(0,174,217,0.2); background: rgba(13,34,64,0.9); flex-shrink: 0; }
@@ -118,7 +132,6 @@
     .save-indicator { font-size: 11px; color: rgba(255,255,255,0.35); display: flex; align-items: center; gap: 5px; }
     .save-dot { width: 7px; height: 7px; border-radius: 50%; background: #2FE5A0; display: inline-block; }
     .save-dot.saving { background: #EF9F27; animation: blink 0.6s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1;}50%{opacity:0.3;} }
     .acard { background: rgba(255,255,255,0.04); border: 0.5px solid rgba(255,255,255,0.1); border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem; }
     .acard-header { padding: 10px 16px; background: rgba(0,174,217,0.08); font-size: 11px; font-weight: 600; color: #00AED9; letter-spacing: 0.6px; text-transform: uppercase; border-bottom: 0.5px solid rgba(0,174,217,0.15); }
     .out-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid rgba(255,255,255,0.07); flex-wrap: wrap; gap: 4px; }
@@ -205,6 +218,13 @@
 
 <div class="bg"><div class="bg-dots"></div><div class="bg-glow1"></div><div class="bg-glow2"></div></div>
 
+<!-- SYNC STATUS BAR -->
+<div class="sync-bar">
+  <span class="sync-dot connecting" id="sync-dot"></span>
+  <span id="sync-label">Connecting to cloud...</span>
+</div>
+
+<!-- HEADER -->
 <div class="header">
   <div class="header-left">
     <div class="brand-icon"><i class="ti ti-license"></i></div>
@@ -217,6 +237,7 @@
   </div>
 </div>
 
+<!-- GREETING -->
 <div class="greeting-strip">
   <div class="greeting-left">
     <div class="eyebrow">Carvana Tolleson</div>
@@ -224,28 +245,36 @@
     <div class="greeting-sub">Sign out a plate below, or return one when you're done.</div>
   </div>
   <div class="stats-row">
-    <div class="stat-pill"><div class="stat-num green" id="s-avail">7</div><div class="stat-lbl">Available</div></div>
-    <div class="stat-pill"><div class="stat-num blue" id="s-out">0</div><div class="stat-lbl">Out</div></div>
-    <div class="stat-pill" id="overdue-stat-pill"><div class="stat-num red" id="s-overdue">0</div><div class="stat-lbl">Overdue</div></div>
+    <div class="stat-pill"><div class="stat-num green" id="s-avail">—</div><div class="stat-lbl">Available</div></div>
+    <div class="stat-pill"><div class="stat-num blue" id="s-out">—</div><div class="stat-lbl">Out</div></div>
+    <div class="stat-pill" id="overdue-stat-pill"><div class="stat-num red" id="s-overdue">—</div><div class="stat-lbl">Overdue</div></div>
   </div>
 </div>
 
+<!-- OVERDUE BANNER -->
 <div id="overdue-banner" class="overdue-banner">
   <i class="ti ti-alert-triangle"></i>
   <div class="overdue-banner-text" id="overdue-banner-text"></div>
 </div>
 
+<!-- PLATES -->
 <div class="plates-area">
   <div class="plates-section-label">All dealer plates — tap to sign out or return</div>
-  <div class="plates-grid" id="plates-grid"></div>
+  <div class="plates-grid" id="plates-grid">
+    <div style="grid-column:1/-1;text-align:center;padding:2rem;color:rgba(255,255,255,0.3);font-size:13px;">
+      <i class="ti ti-loader" style="font-size:22px;display:block;margin-bottom:8px;animation:spin 1s linear infinite;"></i>
+      Connecting to cloud database...
+    </div>
+  </div>
 </div>
 
+<!-- FOOTER -->
 <div class="footer">
   <span class="footer-date" id="footer-date"></span>
   <span class="footer-tag">The new way to buy &amp; sell cars</span>
 </div>
 
-<!-- SUCCESS -->
+<!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="success-overlay">
   <div class="suc-icon-wrap" id="suc-icon-wrap"><i class="ti ti-circle-check" id="suc-icon"></i></div>
   <div class="suc-title" id="suc-title"></div>
@@ -262,7 +291,7 @@
       <div><div class="brand-name">Admin View</div><div class="brand-sub">Tolleson Post Production</div></div>
     </div>
     <div class="header-right">
-      <div class="save-indicator"><span class="save-dot" id="save-dot"></span><span id="save-label">All saved</span></div>
+      <div class="save-indicator"><span class="save-dot" id="save-dot"></span><span id="save-label">Synced</span></div>
       <button class="btn-admin" onclick="showChangePinModal()"><i class="ti ti-lock" style="font-size:13px;"></i><span>Change PIN</span></button>
       <button class="btn-admin" onclick="closeAdmin()"><i class="ti ti-arrow-left" style="font-size:13px;"></i><span>Back</span></button>
     </div>
@@ -355,7 +384,7 @@
 <div class="modal-overlay" id="modal-clear">
   <div class="modal-box">
     <h2 class="modal-title">Clear activity log?</h2>
-    <p class="modal-sub">This permanently deletes all sign-out history. Enter PIN to confirm.</p>
+    <p class="modal-sub">This permanently deletes all sign-out history from the cloud. Enter PIN to confirm.</p>
     <div class="form-field"><input type="password" class="form-input" id="clear-pin" maxlength="4" placeholder="Enter PIN" autocomplete="off" oninput="this.value=this.value.replace(/[^0-9]/g,'')" /></div>
     <div class="pin-error" id="clear-pin-error">Incorrect PIN. Please try again.</div>
     <div class="modal-footer">
@@ -381,9 +410,27 @@
   </div>
 </div>
 
+<style>
+  @keyframes spin { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
+</style>
+
 <script>
-const PLATES = ['04H7DL','78H1DL','EDLY26','EDLY15','EDLY25','69C4DL','EDLY27'];
-const ROSTER = [
+// ── FIREBASE CONFIG ────────────────────────────────────────────────────────────
+var firebaseConfig = {
+  apiKey: "AIzaSyASo9Hvs2lN6WAHRYf7JYoouD8YOMh-XDk",
+  authDomain: "tolleson-pp-plate-kiosk.firebaseapp.com",
+  databaseURL: "https://tolleson-pp-plate-kiosk-default-rtdb.firebaseio.com",
+  projectId: "tolleson-pp-plate-kiosk",
+  storageBucket: "tolleson-pp-plate-kiosk.firebasestorage.app",
+  messagingSenderId: "44363650073",
+  appId: "1:44363650073:web:95b9845dbc0d5111c84688"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────────────
+var PLATES = ['04H7DL','78H1DL','EDLY26','EDLY15','EDLY25','69C4DL','EDLY27'];
+var ROSTER = [
   {name:"Abel Nava",role:"Quality Associate",shift:"Shift 1",empId:"27446",onLeave:false},
   {name:"Abraham Soto Garcia",role:"Inventory Associate I",shift:"Shift 1",empId:"141319",onLeave:false},
   {name:"Adam Gaines",role:"Technician III",shift:"Shift 1",empId:"124315",onLeave:false},
@@ -421,287 +468,374 @@ const ROSTER = [
   {name:"Victor Mondragon",role:"Inventory Associate I",shift:"Shift 3",empId:"105639",onLeave:false}
 ];
 
-let plates = {}, log = [], supervisorPin = '0122', selectedAssociate = null, activePlate = null, countdownInterval = null, saveTimeout = null;
-PLATES.forEach(function(id){ plates[id] = {status:'available',tech:null,role:null,empId:null,since:null}; });
+// ── STATE ──────────────────────────────────────────────────────────────────────
+var plates = {};
+var log = [];
+var supervisorPin = '0122';
+var selectedAssociate = null;
+var activePlate = null;
+var countdownInterval = null;
 
-function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
-function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+PLATES.forEach(function(id){
+  plates[id] = {status:'available',tech:null,role:null,empId:null,since:null};
+});
 
-function loadData(){
-  try{
-    var ps = lsGet('dp-plates'); if(ps){ var s=JSON.parse(ps); PLATES.forEach(function(id){ if(s[id]) plates[id]=s[id]; }); }
-    var lg = lsGet('dp-log'); if(lg) log=JSON.parse(lg);
-    var pin = lsGet('dp-pin'); if(pin) supervisorPin=pin;
-  }catch(e){}
-  render(); updateHeader();
+// ── FIREBASE LISTENERS ─────────────────────────────────────────────────────────
+function initFirebase(){
+  setSyncStatus('connecting');
+
+  // Listen for plate state changes in real time
+  db.ref('plates').on('value', function(snapshot){
+    var data = snapshot.val();
+    if(data){
+      PLATES.forEach(function(id){
+        if(data[id]) plates[id] = data[id];
+        else plates[id] = {status:'available',tech:null,role:null,empId:null,since:null};
+      });
+    } else {
+      // First time — initialise all plates in Firebase
+      var init = {};
+      PLATES.forEach(function(id){ init[id] = {status:'available',tech:null,role:null,empId:null,since:null}; });
+      db.ref('plates').set(init);
+    }
+    render();
+    setSyncStatus('connected');
+  }, function(err){
+    setSyncStatus('error');
+  });
+
+  // Listen for log changes in real time
+  db.ref('log').on('value', function(snapshot){
+    var data = snapshot.val();
+    log = data ? Object.values(data) : [];
+    log.sort(function(a,b){ return a.ts - b.ts; });
+    if(document.getElementById('admin-screen').classList.contains('open')) renderAdmin();
+  });
+
+  // Listen for PIN changes
+  db.ref('config/pin').on('value', function(snapshot){
+    if(snapshot.val()) supervisorPin = snapshot.val();
+  });
 }
 
-function saveData(){
-  var dot=document.getElementById('save-dot'), lbl=document.getElementById('save-label');
-  dot.classList.add('saving'); lbl.textContent='Saving...';
-  clearTimeout(saveTimeout);
-  saveTimeout=setTimeout(function(){
-    try{ lsSet('dp-plates',JSON.stringify(plates)); lsSet('dp-log',JSON.stringify(log)); dot.classList.remove('saving'); lbl.textContent='All saved'; }
-    catch(e){ dot.classList.remove('saving'); lbl.textContent='Save failed'; }
-  },600);
+function setSyncStatus(status){
+  var dot = document.getElementById('sync-dot');
+  var label = document.getElementById('sync-label');
+  var saveDot = document.getElementById('save-dot');
+  var saveLabel = document.getElementById('save-label');
+  if(status === 'connected'){
+    dot.className = 'sync-dot connected';
+    label.textContent = 'Live — synced across all devices';
+    if(saveDot){ saveDot.style.background = '#2FE5A0'; saveDot.classList.remove('saving'); }
+    if(saveLabel) saveLabel.textContent = 'Synced';
+  } else if(status === 'connecting'){
+    dot.className = 'sync-dot connecting';
+    label.textContent = 'Connecting to cloud...';
+  } else {
+    dot.className = 'sync-dot error';
+    label.textContent = 'Connection error — check internet';
+  }
 }
 
+function savePlate(id){
+  db.ref('plates/' + id).set(plates[id]);
+}
+
+function saveLogEntry(entry){
+  db.ref('log').push(entry);
+}
+
+function clearLogFirebase(){
+  db.ref('log').remove();
+}
+
+function savePinFirebase(pin){
+  db.ref('config/pin').set(pin);
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────────
 function getShiftInfo(ts){
-  var d=new Date(ts), h=d.getHours()+d.getMinutes()/60;
-  if(h>=6&&h<15) return {name:'Shift 1',end:15};
-  if(h>=16||h<3) return {name:'Shift 2',end:27};
+  var d = new Date(ts), h = d.getHours() + d.getMinutes()/60;
+  if(h >= 6 && h < 15) return {name:'Shift 1', end:15};
+  if(h >= 16 || h < 3) return {name:'Shift 2', end:27};
   return null;
 }
 function getShiftEndTime(since){
-  var co=new Date(since), shift=getShiftInfo(since);
+  var co = new Date(since), shift = getShiftInfo(since);
   if(!shift) return null;
-  var end=new Date(co);
-  if(shift.end===15){ end.setHours(15,0,0,0); if(end<=co) end.setDate(end.getDate()+1); }
-  else{ end.setHours(3,0,0,0); end.setDate(end.getDate()+1); if(end<=co) end.setDate(end.getDate()+1); }
+  var end = new Date(co);
+  if(shift.end === 15){ end.setHours(15,0,0,0); if(end <= co) end.setDate(end.getDate()+1); }
+  else{ end.setHours(3,0,0,0); end.setDate(end.getDate()+1); if(end <= co) end.setDate(end.getDate()+1); }
   return end;
 }
-function isOverdue(since){ if(!since) return false; var e=getShiftEndTime(since); return e?Date.now()>e:false; }
+function isOverdue(since){ if(!since) return false; var e = getShiftEndTime(since); return e ? Date.now() > e : false; }
 function overdueFor(since){
-  var e=getShiftEndTime(since); if(!e) return '';
-  var d=Math.floor((Date.now()-e)/60000);
-  if(d<1) return 'just now'; if(d<60) return d+'m overdue';
+  var e = getShiftEndTime(since); if(!e) return '';
+  var d = Math.floor((Date.now()-e)/60000);
+  if(d < 1) return 'just now'; if(d < 60) return d+'m overdue';
   return Math.floor(d/60)+'h '+(d%60)+'m overdue';
 }
 function elapsed(ts){
-  var d=Math.floor((Date.now()-ts)/60000);
-  if(d<1) return 'just now'; if(d<60) return d+'m ago';
+  var d = Math.floor((Date.now()-ts)/60000);
+  if(d < 1) return 'just now'; if(d < 60) return d+'m ago';
   return Math.floor(d/60)+'h '+(d%60)+'m ago';
 }
 function fmtTime(ts){ return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
-function fmtShort(ts){ var d=new Date(ts); return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' · '+d.toLocaleDateString([],{month:'short',day:'numeric'}); }
+function fmtShort(ts){ var d = new Date(ts); return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+' · '+d.toLocaleDateString([],{month:'short',day:'numeric'}); }
 function fmtFull(ts){ return new Date(ts).toLocaleString([],{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 
+// ── HEADER & CLOCK ─────────────────────────────────────────────────────────────
 function updateHeader(){
-  var now=new Date(), h=now.getHours()+now.getMinutes()/60;
-  var pill=document.getElementById('shift-pill');
-  if(h>=6&&h<15){ pill.className='shift-pill sp-s1'; pill.innerHTML='<i class="ti ti-sun" style="font-size:11px;"></i>&nbsp;Shift 1 · Ends 3 PM'; }
-  else if(h>=16||h<3){ pill.className='shift-pill sp-s2'; pill.innerHTML='<i class="ti ti-moon" style="font-size:11px;"></i>&nbsp;Shift 2 · Ends 3 AM'; }
-  else{ pill.className='shift-pill sp-btwn'; pill.textContent='Between shifts'; }
-  document.getElementById('clock').textContent=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-  document.getElementById('footer-date').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var now = new Date(), h = now.getHours() + now.getMinutes()/60;
+  var pill = document.getElementById('shift-pill');
+  if(h >= 6 && h < 15){ pill.className = 'shift-pill sp-s1'; pill.innerHTML = '<i class="ti ti-sun" style="font-size:11px;"></i>&nbsp;Shift 1 · Ends 3 PM'; }
+  else if(h >= 16 || h < 3){ pill.className = 'shift-pill sp-s2'; pill.innerHTML = '<i class="ti ti-moon" style="font-size:11px;"></i>&nbsp;Shift 2 · Ends 3 AM'; }
+  else{ pill.className = 'shift-pill sp-btwn'; pill.textContent = 'Between shifts'; }
+  document.getElementById('clock').textContent = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('footer-date').textContent = now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric',year:'numeric'});
 }
 
+// ── RENDER GRID ────────────────────────────────────────────────────────────────
 function render(){
-  var out=PLATES.filter(function(id){ return plates[id].status==='out'; }).length;
-  var ov=PLATES.filter(function(id){ return plates[id].status==='out' && isOverdue(plates[id].since); });
-  document.getElementById('s-avail').textContent=PLATES.length-out;
-  document.getElementById('s-out').textContent=out;
-  document.getElementById('s-overdue').textContent=ov.length;
-  var odStat=document.getElementById('overdue-stat-pill');
-  odStat.style.background=ov.length>0?'rgba(255,107,107,0.12)':'';
-  odStat.style.border=ov.length>0?'0.5px solid rgba(255,107,107,0.3)':'';
-  var banner=document.getElementById('overdue-banner');
-  if(ov.length>0){
-    banner.style.display='flex';
-    document.getElementById('overdue-banner-text').innerHTML='<strong>'+ov.length+' plate'+(ov.length>1?'s':'')+' not returned before shift end:</strong> '+ov.map(function(id){ return '<strong>'+id+'</strong> — see <em>'+plates[id].tech+'</em>'; }).join(', ');
-  } else { banner.style.display='none'; }
+  var out = PLATES.filter(function(id){ return plates[id].status === 'out'; }).length;
+  var ov = PLATES.filter(function(id){ return plates[id].status === 'out' && isOverdue(plates[id].since); });
+  document.getElementById('s-avail').textContent = PLATES.length - out;
+  document.getElementById('s-out').textContent = out;
+  document.getElementById('s-overdue').textContent = ov.length;
+  var odStat = document.getElementById('overdue-stat-pill');
+  odStat.style.background = ov.length > 0 ? 'rgba(255,107,107,0.12)' : '';
+  odStat.style.border = ov.length > 0 ? '0.5px solid rgba(255,107,107,0.3)' : '';
+  var banner = document.getElementById('overdue-banner');
+  if(ov.length > 0){
+    banner.style.display = 'flex';
+    document.getElementById('overdue-banner-text').innerHTML = '<strong>'+ov.length+' plate'+(ov.length > 1 ? 's' : '')+' not returned before shift end:</strong> '+ov.map(function(id){ return '<strong>'+id+'</strong> — see <em>'+plates[id].tech+'</em>'; }).join(', ');
+  } else { banner.style.display = 'none'; }
 
-  var grid=document.getElementById('plates-grid'); grid.innerHTML='';
+  var grid = document.getElementById('plates-grid'); grid.innerHTML = '';
   PLATES.forEach(function(id){
-    var p=plates[id], avail=p.status==='available', overdue=!avail&&isOverdue(p.since);
-    var card=document.createElement('div');
-    var cardClass='plate-card '+(avail?'available':overdue?'overdue':'checked-out');
-    card.setAttribute('class', cardClass);
-    var bc=avail?'pb-avail':overdue?'pb-overdue':'pb-out';
-    var bt=avail?'Available':overdue?'⚠ Overdue':'Signed out';
-    var info=avail?'<div class="plate-ready">Ready for use</div>':
+    var p = plates[id], avail = p.status === 'available', overdue = !avail && isOverdue(p.since);
+    var card = document.createElement('div');
+    card.setAttribute('class', 'plate-card '+(avail ? 'available' : overdue ? 'overdue' : 'checked-out'));
+    var bc = avail ? 'pb-avail' : overdue ? 'pb-overdue' : 'pb-out';
+    var bt = avail ? 'Available' : overdue ? '⚠ Overdue' : 'Signed out';
+    var info = avail ? '<div class="plate-ready">Ready for use</div>' :
       '<div class="plate-tech-name">'+p.tech+'</div>'+
       '<div class="plate-checkout-time">Out since '+fmtTime(p.since)+'</div>'+
-      '<div class="plate-duration '+(overdue?'warn':'ok')+'">'+(overdue?'<i class="ti ti-clock-exclamation" style="font-size:11px;"></i>'+overdueFor(p.since):elapsed(p.since))+'</div>';
-    var btnHtml=avail?
-      '<button class="btn-plate btn-out" onclick="openCheckout(\''+id+'\')"><i class="ti ti-arrow-bar-up" style="font-size:12px;color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;"></i><span style="color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;">Sign out</span></button>':
+      '<div class="plate-duration '+(overdue ? 'warn' : 'ok')+'">'+(overdue ? '<i class="ti ti-clock-exclamation" style="font-size:11px;"></i>'+overdueFor(p.since) : elapsed(p.since))+'</div>';
+    var btnHtml = avail ?
+      '<button class="btn-plate btn-out" onclick="openCheckout(\''+id+'\')"><i class="ti ti-arrow-bar-up" style="font-size:12px;color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;"></i><span style="color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;">Sign out</span></button>' :
       '<button class="btn-plate btn-ret" onclick="openReturn(\''+id+'\')"><i class="ti ti-arrow-bar-down" style="font-size:12px;color:#00AED9;-webkit-text-fill-color:#00AED9;"></i><span style="color:#00AED9;-webkit-text-fill-color:#00AED9;">Return</span></button>';
-    card.innerHTML='<div class="plate-num">'+id+'</div><span class="plate-badge '+bc+'">'+bt+'</span>'+info+'<div class="plate-action">'+btnHtml+'</div>';
+    card.innerHTML = '<div class="plate-num">'+id+'</div><span class="plate-badge '+bc+'">'+bt+'</span>'+info+'<div class="plate-action">'+btnHtml+'</div>';
     grid.appendChild(card);
   });
 }
 
+// ── SUCCESS OVERLAY ────────────────────────────────────────────────────────────
 function showSuccess(type, plateId, techName){
   clearCountdown();
-  var isOut=type==='out';
-  var wrap=document.getElementById('suc-icon-wrap');
-  wrap.setAttribute('class','suc-icon-wrap '+(isOut?'green':'blue'));
-  document.getElementById('suc-icon').setAttribute('class','ti ti-'+(isOut?'circle-check':'home-check'));
-  document.getElementById('suc-title').textContent=isOut?'Plate signed out!':'Plate returned!';
-  document.getElementById('suc-sub').textContent=isOut?'Remember to return this plate before the end of your shift.':'Thanks for returning the plate. Have a great rest of your shift!';
-  document.getElementById('suc-plate').textContent=plateId;
-  document.getElementById('suc-assoc').textContent=techName;
+  var isOut = type === 'out';
+  document.getElementById('suc-icon-wrap').setAttribute('class', 'suc-icon-wrap '+(isOut ? 'green' : 'blue'));
+  document.getElementById('suc-icon').setAttribute('class', 'ti ti-'+(isOut ? 'circle-check' : 'home-check'));
+  document.getElementById('suc-title').textContent = isOut ? 'Plate signed out!' : 'Plate returned!';
+  document.getElementById('suc-sub').textContent = isOut ? 'Remember to return this plate before the end of your shift.' : 'Thanks for returning the plate. Have a great rest of your shift!';
+  document.getElementById('suc-plate').textContent = plateId;
+  document.getElementById('suc-assoc').textContent = techName;
   document.getElementById('success-overlay').classList.add('show');
-  var c=5; document.getElementById('suc-count').textContent=c;
-  countdownInterval=setInterval(function(){ c--; document.getElementById('suc-count').textContent=c; if(c<=0){ clearCountdown(); document.getElementById('success-overlay').classList.remove('show'); } },1000);
+  var c = 5; document.getElementById('suc-count').textContent = c;
+  countdownInterval = setInterval(function(){
+    c--; document.getElementById('suc-count').textContent = c;
+    if(c <= 0){ clearCountdown(); document.getElementById('success-overlay').classList.remove('show'); }
+  }, 1000);
 }
-function clearCountdown(){ if(countdownInterval){ clearInterval(countdownInterval); countdownInterval=null; } }
+function clearCountdown(){ if(countdownInterval){ clearInterval(countdownInterval); countdownInterval = null; } }
 
+// ── ADMIN ──────────────────────────────────────────────────────────────────────
 function renderAdmin(){
-  var op=PLATES.filter(function(id){ return plates[id].status==='out'; });
-  document.getElementById('currently-out-body').innerHTML=op.length===0?'<div class="none-out">All plates are currently in.</div>':
-    op.map(function(id){ var p=plates[id], over=isOverdue(p.since);
-      return '<div class="out-row'+(over?' overdue-row':'')+'"><span class="out-plate-id">'+id+'</span><span class="out-tech-name">'+p.tech+'<span class="out-tech-id">ID: '+(p.empId||'—')+'</span></span><div class="out-meta"><span class="out-elapsed">'+elapsed(p.since)+'</span>'+(over?'<span class="out-overdue-tag"><i class="ti ti-alert-triangle" style="font-size:11px;vertical-align:-1px;"></i> '+overdueFor(p.since)+'</span>':'')+'</div></div>';
+  var op = PLATES.filter(function(id){ return plates[id].status === 'out'; });
+  document.getElementById('currently-out-body').innerHTML = op.length === 0 ? '<div class="none-out">All plates are currently in.</div>' :
+    op.map(function(id){
+      var p = plates[id], over = isOverdue(p.since);
+      return '<div class="out-row'+(over ? ' overdue-row' : '')+'"><span class="out-plate-id">'+id+'</span><span class="out-tech-name">'+p.tech+'<span class="out-tech-id">ID: '+(p.empId||'—')+'</span></span><div class="out-meta"><span class="out-elapsed">'+elapsed(p.since)+'</span>'+(over ? '<span class="out-overdue-tag"><i class="ti ti-alert-triangle" style="font-size:11px;vertical-align:-1px;"></i> '+overdueFor(p.since)+'</span>' : '')+'</div></div>';
     }).join('');
-  var tbody=document.getElementById('log-body'), empty=document.getElementById('log-empty');
-  document.getElementById('log-count').textContent=log.length+' event'+(log.length!==1?'s':'');
-  var btn=document.getElementById('btn-export'); btn.disabled=log.length===0; btn.style.opacity=log.length===0?'0.4':'1';
-  if(log.length===0){ tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
-  tbody.innerHTML=[].concat(log).reverse().map(function(e){
-    var shift=getShiftInfo(e.ts), sl=shift?shift.name:'—', sc=shift?(shift.name==='Shift 1'?'s1':'s2'):'';
-    var ab=e.action==='out'?'<span class="abadge ab-out">Signed out</span>':e.action==='overdue'?'<span class="abadge ab-over">Overdue return</span>':'<span class="abadge ab-ret">Returned</span>';
-    return '<tr'+(e.note?' class="has-note"':'')+'><td style="font-family:\'DM Mono\',monospace;font-size:11px;font-weight:500;">'+e.plate+'</td><td style="font-size:12px;">'+e.tech+'</td><td style="font-size:11px;color:rgba(255,255,255,0.35);">'+(e.empId||'—')+'</td><td>'+ab+'</td><td><span class="shift-tag '+sc+'">'+sl+'</span></td><td style="color:rgba(255,255,255,0.35);font-size:11px;">'+fmtShort(e.ts)+'</td><td style="color:rgba(255,255,255,0.3);font-size:10px;">'+(e.role||'—')+'</td></tr>'+(e.note?'<tr class="log-note-row"><td colspan="7"><span class="log-note-text"><i class="ti ti-message" style="font-size:11px;vertical-align:-1px;margin-right:4px;"></i>'+e.note+'</span></td></tr>':'');
+
+  var tbody = document.getElementById('log-body'), empty = document.getElementById('log-empty');
+  document.getElementById('log-count').textContent = log.length+' event'+(log.length !== 1 ? 's' : '');
+  var btn = document.getElementById('btn-export'); btn.disabled = log.length === 0; btn.style.opacity = log.length === 0 ? '0.4' : '1';
+  if(log.length === 0){ tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = [].concat(log).reverse().map(function(e){
+    var shift = getShiftInfo(e.ts), sl = shift ? shift.name : '—', sc = shift ? (shift.name === 'Shift 1' ? 's1' : 's2') : '';
+    var ab = e.action === 'out' ? '<span class="abadge ab-out">Signed out</span>' : e.action === 'overdue' ? '<span class="abadge ab-over">Overdue return</span>' : '<span class="abadge ab-ret">Returned</span>';
+    return '<tr'+(e.note ? ' class="has-note"' : '')+'><td style="font-family:\'DM Mono\',monospace;font-size:11px;font-weight:500;">'+e.plate+'</td><td style="font-size:12px;">'+e.tech+'</td><td style="font-size:11px;color:rgba(255,255,255,0.35);">'+(e.empId||'—')+'</td><td>'+ab+'</td><td><span class="shift-tag '+sc+'">'+sl+'</span></td><td style="color:rgba(255,255,255,0.35);font-size:11px;">'+fmtShort(e.ts)+'</td><td style="color:rgba(255,255,255,0.3);font-size:10px;">'+(e.role||'—')+'</td></tr>'+(e.note ? '<tr class="log-note-row"><td colspan="7"><span class="log-note-text"><i class="ti ti-message" style="font-size:11px;vertical-align:-1px;margin-right:4px;"></i>'+e.note+'</span></td></tr>' : '');
   }).join('');
 }
 
+// ── DROPDOWN ───────────────────────────────────────────────────────────────────
 function buildDropdown(filter){
-  var list=document.getElementById('dropdown-list'), q=(filter||'').toLowerCase();
-  var filtered=ROSTER.filter(function(a){ return a.name.toLowerCase().indexOf(q)!==-1||a.empId.indexOf(q)!==-1; });
-  if(filtered.length===0){ list.innerHTML='<div class="no-results">No associates found</div>'; return; }
-  list.innerHTML=filtered.map(function(a){
-    var sel=selectedAssociate&&selectedAssociate.empId===a.empId?'selected':'';
-    return '<div class="dd-item '+sel+'" onclick="selectAssociate(\''+a.empId+'\')"><span>'+a.name+'</span><span class="dd-right">'+(a.onLeave?'<span class="dd-leave">On leave</span>':'')+'<span class="dd-role">'+a.role+'</span></span></div>';
+  var list = document.getElementById('dropdown-list'), q = (filter||'').toLowerCase();
+  var filtered = ROSTER.filter(function(a){ return a.name.toLowerCase().indexOf(q) !== -1 || a.empId.indexOf(q) !== -1; });
+  if(filtered.length === 0){ list.innerHTML = '<div class="no-results">No associates found</div>'; return; }
+  list.innerHTML = filtered.map(function(a){
+    var sel = selectedAssociate && selectedAssociate.empId === a.empId ? 'selected' : '';
+    return '<div class="dd-item '+sel+'" onclick="selectAssociate(\''+a.empId+'\')"><span>'+a.name+'</span><span class="dd-right">'+(a.onLeave ? '<span class="dd-leave">On leave</span>' : '')+'<span class="dd-role">'+a.role+'</span></span></div>';
   }).join('');
 }
 function openDropdown(){ document.getElementById('dropdown-list').classList.add('open'); buildDropdown(document.getElementById('search-input').value); }
 function filterDropdown(){
   buildDropdown(document.getElementById('search-input').value);
   document.getElementById('dropdown-list').classList.add('open');
-  if(document.getElementById('search-input').value!==(selectedAssociate?selectedAssociate.name:'')){ selectedAssociate=null; document.getElementById('sel-card').style.display='none'; }
+  if(document.getElementById('search-input').value !== (selectedAssociate ? selectedAssociate.name : '')){ selectedAssociate = null; document.getElementById('sel-card').style.display = 'none'; }
 }
 function selectAssociate(empId){
-  selectedAssociate=ROSTER.filter(function(a){ return a.empId===empId; })[0];
-  document.getElementById('search-input').value=selectedAssociate.name;
+  selectedAssociate = ROSTER.filter(function(a){ return a.empId === empId; })[0];
+  document.getElementById('search-input').value = selectedAssociate.name;
   document.getElementById('dropdown-list').classList.remove('open');
   document.getElementById('search-input').classList.remove('error');
-  document.getElementById('sel-name').textContent=selectedAssociate.name;
-  document.getElementById('sel-role').textContent=selectedAssociate.role;
-  document.getElementById('sel-empid').textContent=selectedAssociate.empId;
-  document.getElementById('sel-shift').textContent=selectedAssociate.shift;
-  document.getElementById('sel-leave').style.display=selectedAssociate.onLeave?'block':'none';
-  document.getElementById('sel-card').style.display='block';
+  document.getElementById('sel-name').textContent = selectedAssociate.name;
+  document.getElementById('sel-role').textContent = selectedAssociate.role;
+  document.getElementById('sel-empid').textContent = selectedAssociate.empId;
+  document.getElementById('sel-shift').textContent = selectedAssociate.shift;
+  document.getElementById('sel-leave').style.display = selectedAssociate.onLeave ? 'block' : 'none';
+  document.getElementById('sel-card').style.display = 'block';
 }
 
+// ── CHECKOUT / RETURN ──────────────────────────────────────────────────────────
 function openCheckout(id){
-  activePlate=id; selectedAssociate=null;
-  document.getElementById('co-title').textContent='Sign out '+id;
-  document.getElementById('search-input').value='';
+  activePlate = id; selectedAssociate = null;
+  document.getElementById('co-title').textContent = 'Sign out '+id;
+  document.getElementById('search-input').value = '';
   document.getElementById('search-input').classList.remove('error');
   document.getElementById('dropdown-list').classList.remove('open');
-  document.getElementById('sel-card').style.display='none';
+  document.getElementById('sel-card').style.display = 'none';
   document.getElementById('modal-checkout').classList.add('open');
-  setTimeout(function(){ document.getElementById('search-input').focus(); },80);
+  setTimeout(function(){ document.getElementById('search-input').focus(); }, 80);
 }
 function openReturn(id){
-  activePlate=id; var p=plates[id], over=isOverdue(p.since);
-  document.getElementById('ret-title').textContent='Return '+id;
-  document.getElementById('ret-sub').textContent=over?'⚠ This plate is overdue. A reason is required.':'Confirm the return of this plate.';
-  document.getElementById('ret-name').textContent=p.tech;
-  document.getElementById('ret-time').textContent=fmtShort(p.since);
-  document.getElementById('ret-duration').textContent=elapsed(p.since);
-  document.getElementById('ret-duration').style.color=over?'#FF6B6B':'#00AED9';
-  document.getElementById('overdue-note-sec').style.display=over?'block':'none';
-  if(over){ document.getElementById('overdue-note').value=''; document.getElementById('overdue-note').classList.remove('error'); }
+  activePlate = id; var p = plates[id], over = isOverdue(p.since);
+  document.getElementById('ret-title').textContent = 'Return '+id;
+  document.getElementById('ret-sub').textContent = over ? '⚠ This plate is overdue. A reason is required.' : 'Confirm the return of this plate.';
+  document.getElementById('ret-name').textContent = p.tech;
+  document.getElementById('ret-time').textContent = fmtShort(p.since);
+  document.getElementById('ret-duration').textContent = elapsed(p.since);
+  document.getElementById('ret-duration').style.color = over ? '#FF6B6B' : '#00AED9';
+  document.getElementById('overdue-note-sec').style.display = over ? 'block' : 'none';
+  if(over){ document.getElementById('overdue-note').value = ''; document.getElementById('overdue-note').classList.remove('error'); }
   document.getElementById('modal-return').classList.add('open');
 }
 
 function confirmCheckout(){
   if(!selectedAssociate){ document.getElementById('search-input').classList.add('error'); document.getElementById('search-input').focus(); return; }
-  var ts=Date.now(), shift=getShiftInfo(ts);
+  var ts = Date.now(), shift = getShiftInfo(ts);
   if(!shift){ if(!confirm('Plate is being signed out between shifts. Continue?')) return; }
-  plates[activePlate]={status:'out',tech:selectedAssociate.name,role:selectedAssociate.role,empId:selectedAssociate.empId,since:ts};
-  log.push({plate:activePlate,tech:selectedAssociate.name,role:selectedAssociate.role,empId:selectedAssociate.empId,action:'out',ts:ts,note:''});
-  var name=selectedAssociate.name; closeModals(); saveData(); render(); showSuccess('out',activePlate,name);
-}
-function confirmReturn(){
-  var p=plates[activePlate], over=isOverdue(p.since);
-  if(over){
-    var note=document.getElementById('overdue-note').value.replace(/^\s+|\s+$/g,'');
-    if(!note){ document.getElementById('overdue-note').classList.add('error'); document.getElementById('overdue-note').focus(); return; }
-    document.getElementById('overdue-note').classList.remove('error');
-    log.push({plate:activePlate,tech:p.tech,role:p.role,empId:p.empId,action:'overdue',ts:Date.now(),note:note});
-  } else {
-    log.push({plate:activePlate,tech:p.tech,role:p.role,empId:p.empId,action:'ret',ts:Date.now(),note:''});
-  }
-  var name=p.tech, pid=activePlate;
-  plates[activePlate]={status:'available',tech:null,role:null,empId:null,since:null};
-  closeModals(); saveData(); render(); showSuccess('ret',pid,name);
+  plates[activePlate] = {status:'out', tech:selectedAssociate.name, role:selectedAssociate.role, empId:selectedAssociate.empId, since:ts};
+  var entry = {plate:activePlate, tech:selectedAssociate.name, role:selectedAssociate.role, empId:selectedAssociate.empId, action:'out', ts:ts, note:''};
+  var name = selectedAssociate.name;
+  savePlate(activePlate);
+  saveLogEntry(entry);
+  closeModals();
+  showSuccess('out', activePlate, name);
 }
 
+function confirmReturn(){
+  var p = plates[activePlate], over = isOverdue(p.since);
+  if(over){
+    var note = document.getElementById('overdue-note').value.replace(/^\s+|\s+$/g,'');
+    if(!note){ document.getElementById('overdue-note').classList.add('error'); document.getElementById('overdue-note').focus(); return; }
+    document.getElementById('overdue-note').classList.remove('error');
+    saveLogEntry({plate:activePlate, tech:p.tech, role:p.role, empId:p.empId, action:'overdue', ts:Date.now(), note:note});
+  } else {
+    saveLogEntry({plate:activePlate, tech:p.tech, role:p.role, empId:p.empId, action:'ret', ts:Date.now(), note:''});
+  }
+  var name = p.tech, pid = activePlate;
+  plates[activePlate] = {status:'available', tech:null, role:null, empId:null, since:null};
+  savePlate(activePlate);
+  closeModals();
+  showSuccess('ret', pid, name);
+}
+
+// ── ADMIN ACTIONS ──────────────────────────────────────────────────────────────
 function promptAdminPin(){
-  document.getElementById('admin-pin-input').value='';
+  document.getElementById('admin-pin-input').value = '';
   document.getElementById('admin-pin-error').classList.remove('show');
   document.getElementById('modal-admin-pin').classList.add('open');
-  setTimeout(function(){ document.getElementById('admin-pin-input').focus(); },80);
+  setTimeout(function(){ document.getElementById('admin-pin-input').focus(); }, 80);
 }
 function confirmAdminPin(){
-  if(document.getElementById('admin-pin-input').value!==supervisorPin){ document.getElementById('admin-pin-error').classList.add('show'); document.getElementById('admin-pin-input').value=''; document.getElementById('admin-pin-input').focus(); return; }
+  if(document.getElementById('admin-pin-input').value !== supervisorPin){ document.getElementById('admin-pin-error').classList.add('show'); document.getElementById('admin-pin-input').value = ''; document.getElementById('admin-pin-input').focus(); return; }
   closeModals(); renderAdmin(); document.getElementById('admin-screen').classList.add('open');
 }
 function closeAdmin(){ document.getElementById('admin-screen').classList.remove('open'); }
 
 function showClearConfirm(){
-  document.getElementById('clear-pin').value='';
+  document.getElementById('clear-pin').value = '';
   document.getElementById('clear-pin-error').classList.remove('show');
   document.getElementById('modal-clear').classList.add('open');
-  setTimeout(function(){ document.getElementById('clear-pin').focus(); },80);
+  setTimeout(function(){ document.getElementById('clear-pin').focus(); }, 80);
 }
 function confirmClear(){
-  if(document.getElementById('clear-pin').value!==supervisorPin){ document.getElementById('clear-pin-error').classList.add('show'); document.getElementById('clear-pin').value=''; document.getElementById('clear-pin').focus(); return; }
-  log=[]; lsSet('dp-log',JSON.stringify(log)); closeModals(); renderAdmin();
+  if(document.getElementById('clear-pin').value !== supervisorPin){ document.getElementById('clear-pin-error').classList.add('show'); document.getElementById('clear-pin').value = ''; document.getElementById('clear-pin').focus(); return; }
+  clearLogFirebase();
+  closeModals();
 }
+
 function showChangePinModal(){
-  ['pin-current','pin-new','pin-confirm'].forEach(function(id){ document.getElementById(id).value=''; });
+  ['pin-current','pin-new','pin-confirm'].forEach(function(id){ document.getElementById(id).value = ''; });
   document.getElementById('pin-change-error').classList.remove('show');
   document.getElementById('modal-pin').classList.add('open');
 }
 function confirmPinChange(){
-  var cur=document.getElementById('pin-current').value, nw=document.getElementById('pin-new').value, cf=document.getElementById('pin-confirm').value;
-  var err=document.getElementById('pin-change-error');
-  if(cur!==supervisorPin){ err.textContent='Current PIN is incorrect.'; err.classList.add('show'); return; }
-  if(nw.length!==4){ err.textContent='New PIN must be 4 digits.'; err.classList.add('show'); return; }
-  if(nw!==cf){ err.textContent='New PINs do not match.'; err.classList.add('show'); return; }
-  supervisorPin=nw; lsSet('dp-pin',nw); closeModals(); alert('PIN updated successfully.');
+  var cur = document.getElementById('pin-current').value, nw = document.getElementById('pin-new').value, cf = document.getElementById('pin-confirm').value;
+  var err = document.getElementById('pin-change-error');
+  if(cur !== supervisorPin){ err.textContent = 'Current PIN is incorrect.'; err.classList.add('show'); return; }
+  if(nw.length !== 4){ err.textContent = 'New PIN must be 4 digits.'; err.classList.add('show'); return; }
+  if(nw !== cf){ err.textContent = 'New PINs do not match.'; err.classList.add('show'); return; }
+  supervisorPin = nw;
+  savePinFirebase(nw);
+  closeModals();
+  alert('PIN updated successfully.');
 }
 
+// ── CSV EXPORT ─────────────────────────────────────────────────────────────────
 function exportCSV(){
-  if(log.length===0) return;
-  var headers=['Plate Number','Associate','Employee ID','Role','Action','Shift','Date & Time','Overdue Note'];
-  var rows=log.map(function(e){
-    var shift=getShiftInfo(e.ts);
-    var action=e.action==='out'?'Signed Out':e.action==='overdue'?'Overdue Return':'Returned';
-    return [e.plate,e.tech,e.empId||'',e.role||'',action,shift?shift.name:'—',fmtFull(e.ts),e.note||''].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
+  if(log.length === 0) return;
+  var headers = ['Plate Number','Associate','Employee ID','Role','Action','Shift','Date & Time','Overdue Note'];
+  var rows = log.map(function(e){
+    var shift = getShiftInfo(e.ts);
+    var action = e.action === 'out' ? 'Signed Out' : e.action === 'overdue' ? 'Overdue Return' : 'Returned';
+    return [e.plate, e.tech, e.empId||'', e.role||'', action, shift ? shift.name : '—', fmtFull(e.ts), e.note||''].map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(',');
   });
-  var p1=new Date(log[0].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
-  var p2=new Date(log[log.length-1].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
-  var meta=['"Dealer Plate Sign-Out Log — Tolleson Post Production"','"Period: '+p1+' – '+p2+'"','"Generated: '+new Date().toLocaleString()+'"',''];
-  var csv=meta.join('\n')+headers.map(function(h){ return '"'+h+'"'; }).join(',')+'\n'+rows.join('\n');
-  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='dealer-plate-log-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
-  var notice=document.getElementById('export-notice'); notice.style.display='flex'; setTimeout(function(){ notice.style.display='none'; },5000);
+  var p1 = new Date(log[0].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
+  var p2 = new Date(log[log.length-1].ts).toLocaleDateString([],{year:'numeric',month:'short',day:'numeric'});
+  var meta = ['"Dealer Plate Sign-Out Log — Tolleson Post Production"','"Period: '+p1+' – '+p2+'"','"Generated: '+new Date().toLocaleString()+'"',''];
+  var csv = meta.join('\n') + headers.map(function(h){ return '"'+h+'"'; }).join(',') + '\n' + rows.join('\n');
+  var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download = 'dealer-plate-log-'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  var notice = document.getElementById('export-notice'); notice.style.display = 'flex'; setTimeout(function(){ notice.style.display = 'none'; }, 5000);
 }
 
+// ── MODALS ─────────────────────────────────────────────────────────────────────
 function closeModals(){
   document.querySelectorAll('.modal-overlay').forEach(function(m){ m.classList.remove('open'); });
   document.getElementById('dropdown-list').classList.remove('open');
 }
 
-document.addEventListener('click',function(e){
-  var list=document.getElementById('dropdown-list'), si=document.getElementById('search-input');
-  if(!list.contains(e.target)&&e.target!==si) list.classList.remove('open');
-  document.querySelectorAll('.modal-overlay').forEach(function(m){ if(e.target===m) closeModals(); });
+document.addEventListener('click', function(e){
+  var list = document.getElementById('dropdown-list'), si = document.getElementById('search-input');
+  if(!list.contains(e.target) && e.target !== si) list.classList.remove('open');
+  document.querySelectorAll('.modal-overlay').forEach(function(m){ if(e.target === m) closeModals(); });
 });
-document.addEventListener('keydown',function(e){
-  if(e.key==='Escape') closeModals();
-  if(e.key==='Enter'){
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeModals();
+  if(e.key === 'Enter'){
     if(document.getElementById('modal-checkout').classList.contains('open')) confirmCheckout();
     if(document.getElementById('modal-admin-pin').classList.contains('open')) confirmAdminPin();
     if(document.getElementById('modal-clear').classList.contains('open')) confirmClear();
   }
 });
 
-setInterval(function(){ render(); updateHeader(); },30000);
-loadData();
+// ── INIT ───────────────────────────────────────────────────────────────────────
+updateHeader();
+setInterval(function(){ render(); updateHeader(); }, 30000);
+initFirebase();
 </script>
 </body>
 </html>
