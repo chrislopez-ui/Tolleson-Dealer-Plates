@@ -81,6 +81,11 @@
     .plate-card.available { background: rgba(47,229,160,0.06); border: 1px solid rgba(47,229,160,0.2); }
     .plate-card.checked-out { background: rgba(0,174,217,0.06); border: 1px solid rgba(0,174,217,0.2); }
     .plate-card.overdue { background: rgba(255,107,107,0.07); border: 1.5px solid rgba(255,107,107,0.4); animation: pulse-card 1.4s ease-in-out infinite; }
+    .plate-card.lost { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); opacity: 0.65; }
+    .plate-card.lost .plate-num { color: rgba(255,255,255,0.45); }
+    .pb-lost { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.45); }
+    .plate-lost-status { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+    .plate-lost-report { font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 2px; font-style: italic; }
     @keyframes pulse-card { 0%,100%{box-shadow:none;}50%{box-shadow:0 0 0 5px rgba(255,107,107,0.1);} }
     .plate-num { font-family: 'DM Mono', monospace; font-size: 15px; font-weight: 500; letter-spacing: 1.5px; color: #fff; margin-bottom: 5px; }
     .plate-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; display: inline-block; margin-bottom: 9px; }
@@ -135,6 +140,12 @@
     .out-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 16px; border-bottom: 0.5px solid rgba(255,255,255,0.07); flex-wrap: wrap; gap: 4px; }
     .out-row:last-child { border-bottom: none; }
     .out-row.overdue-row { background: rgba(255,107,107,0.06); }
+    .out-row.lost-row { background: rgba(255,255,255,0.02); opacity: 0.7; }
+    .lost-tag { font-size: 11px; color: rgba(255,255,255,0.4); font-weight: 500; display: block; }
+    .btn-sm-red { border-color: rgba(255,107,107,0.5) !important; color: #FF6B6B !important; font-weight: 500; }
+    .btn-sm-red:hover { background: rgba(255,107,107,0.1) !important; }
+    .btn-sm-green { border-color: rgba(47,229,160,0.5) !important; color: #2FE5A0 !important; font-weight: 500; }
+    .btn-sm-green:hover { background: rgba(47,229,160,0.1) !important; }
     .out-plate-id { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: #fff; min-width: 80px; }
     .out-tech-name { font-size: 13px; color: #fff; flex: 1; padding: 0 10px; }
     .out-tech-id { font-size: 11px; color: rgba(255,255,255,0.3); font-family: 'DM Mono', monospace; display: block; }
@@ -412,6 +423,43 @@
   @keyframes spin { from{transform:rotate(0deg);}to{transform:rotate(360deg);} }
 </style>
 
+<!-- MARK LOST MODAL -->
+<div class="modal-overlay" id="modal-lost">
+  <div class="modal-box">
+    <h2 class="modal-title" id="lost-title">Mark plate as lost</h2>
+    <p class="modal-sub">This will gray out the plate on the board and show it as lost. A police report number is required.</p>
+    <div class="form-field">
+      <label class="form-label">Police report / case number *</label>
+      <input type="text" class="form-input" id="lost-report" placeholder="e.g. Report #2024-08471" autocomplete="off" />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Additional notes (optional)</label>
+      <textarea class="form-textarea" id="lost-notes" placeholder="e.g. Last seen with Jason Medeiros on 5/18..." style="min-height:60px;"></textarea>
+    </div>
+    <div class="pin-error" id="lost-error">Please enter a police report number.</div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-confirm" style="background:#c0392b !important;" onclick="confirmMarkLost()">
+        <i class="ti ti-alert-triangle" style="font-size:14px;"></i><span>Mark as lost</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- RESTORE PLATE MODAL -->
+<div class="modal-overlay" id="modal-restore">
+  <div class="modal-box">
+    <h2 class="modal-title">Restore plate</h2>
+    <p class="modal-sub" id="restore-sub">Mark this plate as recovered and return it to active inventory?</p>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmRestore()">
+        <i class="ti ti-refresh" style="font-size:14px;"></i><span>Restore plate</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // db is initialised after Firebase SDKs load at the bottom of this file
 var db = null;
@@ -478,12 +526,12 @@ function initFirebase(){
     if(data){
       PLATES.forEach(function(id){
         if(data[id]) plates[id] = data[id];
-        else plates[id] = {status:'available',tech:null,role:null,empId:null,since:null};
+        else plates[id] = {status:'available',tech:null,role:null,empId:null,since:null,lostReport:null,lostNotes:null};
       });
     } else {
       // First time — initialise all plates in Firebase
       var init = {};
-      PLATES.forEach(function(id){ init[id] = {status:'available',tech:null,role:null,empId:null,since:null}; });
+      PLATES.forEach(function(id){ init[id] = {status:'available',tech:null,role:null,empId:null,since:null,lostReport:null,lostNotes:null}; });
       db.ref('plates').set(init);
     }
     render();
@@ -586,8 +634,9 @@ function updateHeader(){
 // ── RENDER GRID ────────────────────────────────────────────────────────────────
 function render(){
   var out = PLATES.filter(function(id){ return plates[id].status === 'out'; }).length;
+  var lostCount = PLATES.filter(function(id){ return plates[id].status === 'lost'; }).length;
   var ov = PLATES.filter(function(id){ return plates[id].status === 'out' && isOverdue(plates[id].since); });
-  document.getElementById('s-avail').textContent = PLATES.length - out;
+  document.getElementById('s-avail').textContent = PLATES.length - out - lostCount;
   document.getElementById('s-out').textContent = out;
   document.getElementById('s-overdue').textContent = ov.length;
   var odStat = document.getElementById('overdue-stat-pill');
@@ -601,19 +650,23 @@ function render(){
 
   var grid = document.getElementById('plates-grid'); grid.innerHTML = '';
   PLATES.forEach(function(id){
-    var p = plates[id], avail = p.status === 'available', overdue = !avail && isOverdue(p.since);
+    var p = plates[id], avail = p.status === 'available', overdue = !avail && !p.lost && isOverdue(p.since), lost = p.status === 'lost';
     var card = document.createElement('div');
-    card.setAttribute('class', 'plate-card '+(avail ? 'available' : overdue ? 'overdue' : 'checked-out'));
-    var bc = avail ? 'pb-avail' : overdue ? 'pb-overdue' : 'pb-out';
-    var bt = avail ? 'Available' : overdue ? '⚠ Overdue' : 'Signed out';
-    var info = avail ? '<div class="plate-ready">Ready for use</div>' :
-      '<div class="plate-tech-name">'+p.tech+'</div>'+
-      '<div class="plate-checkout-time">Out since '+fmtTime(p.since)+'</div>'+
-      '<div class="plate-duration '+(overdue ? 'warn' : 'ok')+'">'+(overdue ? '<i class="ti ti-clock-exclamation" style="font-size:11px;"></i>'+overdueFor(p.since) : elapsed(p.since))+'</div>';
-    var btnHtml = avail ?
+    card.setAttribute('class', 'plate-card '+(lost ? 'lost' : avail ? 'available' : overdue ? 'overdue' : 'checked-out'));
+    var bc = lost ? 'pb-lost' : avail ? 'pb-avail' : overdue ? 'pb-overdue' : 'pb-out';
+    var bt = lost ? '✕ Lost' : avail ? 'Available' : overdue ? '⚠ Overdue' : 'Signed out';
+    var info;
+    if(lost){
+      info = '<div class="plate-lost-status"><i class="ti ti-file-alert" style="font-size:11px;"></i>Police Report Submitted</div>'+(p.lostReport ? '<div class="plate-lost-report">'+p.lostReport+'</div>' : '');
+    } else if(avail){
+      info = '<div class="plate-ready">Ready for use</div>';
+    } else {
+      info = '<div class="plate-tech-name">'+p.tech+'</div><div class="plate-checkout-time">Out since '+fmtTime(p.since)+'</div><div class="plate-duration '+(overdue ? 'warn' : 'ok')+'">'+(overdue ? '<i class="ti ti-clock-exclamation" style="font-size:11px;"></i>'+overdueFor(p.since) : elapsed(p.since))+'</div>';
+    }
+    var btnHtml = lost ? '' : avail ?
       '<button class="btn-plate btn-out" onclick="openCheckout(\''+id+'\')"><i class="ti ti-arrow-bar-up" style="font-size:12px;color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;"></i><span style="color:#2FE5A0;-webkit-text-fill-color:#2FE5A0;">Sign out</span></button>' :
       '<button class="btn-plate btn-ret" onclick="openReturn(\''+id+'\')"><i class="ti ti-arrow-bar-down" style="font-size:12px;color:#00AED9;-webkit-text-fill-color:#00AED9;"></i><span style="color:#00AED9;-webkit-text-fill-color:#00AED9;">Return</span></button>';
-    card.innerHTML = '<div class="plate-num">'+id+'</div><span class="plate-badge '+bc+'">'+bt+'</span>'+info+'<div class="plate-action">'+btnHtml+'</div>';
+    card.innerHTML = '<div class="plate-num">'+id+'</div><span class="plate-badge '+bc+'">'+bt+'</span>'+info+(btnHtml ? '<div class="plate-action">'+btnHtml+'</div>' : '');
     grid.appendChild(card);
   });
 }
@@ -640,12 +693,34 @@ function clearCountdown(){ if(countdownInterval){ clearInterval(countdownInterva
 // ── ADMIN ──────────────────────────────────────────────────────────────────────
 function renderAdmin(){
   var op = PLATES.filter(function(id){ return plates[id].status === 'out'; });
+  var lostPlates = PLATES.filter(function(id){ return plates[id].status === 'lost'; });
+
+  // Currently signed out
   document.getElementById('currently-out-body').innerHTML = op.length === 0 ? '<div class="none-out">All plates are currently in.</div>' :
     op.map(function(id){
       var p = plates[id], over = isOverdue(p.since);
       return '<div class="out-row'+(over ? ' overdue-row' : '')+'"><span class="out-plate-id">'+id+'</span><span class="out-tech-name">'+p.tech+'<span class="out-tech-id">ID: '+(p.empId||'—')+'</span></span><div class="out-meta"><span class="out-elapsed">'+elapsed(p.since)+'</span>'+(over ? '<span class="out-overdue-tag"><i class="ti ti-alert-triangle" style="font-size:11px;vertical-align:-1px;"></i> '+overdueFor(p.since)+'</span>' : '')+'</div></div>';
     }).join('');
 
+  // Lost plates section — always show in admin
+  var lostSection = document.getElementById('lost-plates-section');
+  if(!lostSection){
+    lostSection = document.createElement('div');
+    lostSection.id = 'lost-plates-section';
+    lostSection.className = 'acard';
+    lostSection.style.marginBottom = '1.25rem';
+    var adminBody = document.getElementById('admin-screen').querySelector('.admin-body');
+    adminBody.insertBefore(lostSection, adminBody.querySelector('.log-toolbar'));
+  }
+  lostSection.innerHTML = '<div class="acard-header" style="color:#FF6B6B;background:rgba(255,107,107,0.08);border-color:rgba(255,107,107,0.2);"><i class="ti ti-alert-triangle" style="font-size:12px;vertical-align:-1px;margin-right:5px;"></i>Lost plates — police report submitted</div>'+
+    (lostPlates.length === 0 ? '<div class="none-out" style="color:rgba(255,255,255,0.3);">No plates currently marked as lost.</div>' :
+      lostPlates.map(function(id){
+        var p = plates[id];
+        return '<div class="out-row lost-row" style="align-items:center;"><span class="out-plate-id" style="color:rgba(255,255,255,0.45);">'+id+'</span><span class="out-tech-name" style="color:rgba(255,255,255,0.4);font-size:12px;">'+(p.lostReport||'No report #')+(p.lostNotes ? ' — '+p.lostNotes : '')+'</span><div class="out-meta"><button class="btn-sm btn-sm-green" onclick="openRestorePlate(\''+id+'\')"><i class="ti ti-refresh" style="font-size:12px;"></i>Restore</button></div></div>';
+      }).join(''))+
+    '<div style="padding:10px 16px;"><button class="btn-sm btn-sm-red" onclick="openMarkLost()"><i class="ti ti-alert-triangle" style="font-size:12px;"></i>Mark a plate as lost</button></div>';
+
+  // Log table
   var tbody = document.getElementById('log-body'), empty = document.getElementById('log-empty');
   document.getElementById('log-count').textContent = log.length+' event'+(log.length !== 1 ? 's' : '');
   var btn = document.getElementById('btn-export'); btn.disabled = log.length === 0; btn.style.opacity = log.length === 0 ? '0.4' : '1';
@@ -653,7 +728,7 @@ function renderAdmin(){
   empty.style.display = 'none';
   tbody.innerHTML = [].concat(log).reverse().map(function(e){
     var shift = getShiftInfo(e.ts), sl = shift ? shift.name : '—', sc = shift ? (shift.name === 'Shift 1' ? 's1' : 's2') : '';
-    var ab = e.action === 'out' ? '<span class="abadge ab-out">Signed out</span>' : e.action === 'overdue' ? '<span class="abadge ab-over">Overdue return</span>' : '<span class="abadge ab-ret">Returned</span>';
+    var ab = e.action === 'out' ? '<span class="abadge ab-out">Signed out</span>' : e.action === 'overdue' ? '<span class="abadge ab-over">Overdue return</span>' : e.action === 'lost' ? '<span class="abadge" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.45);">Marked lost</span>' : '<span class="abadge ab-ret">Returned</span>';
     return '<tr'+(e.note ? ' class="has-note"' : '')+'><td style="font-family:\'DM Mono\',monospace;font-size:11px;font-weight:500;">'+e.plate+'</td><td style="font-size:12px;">'+e.tech+'</td><td style="font-size:11px;color:rgba(255,255,255,0.35);">'+(e.empId||'—')+'</td><td>'+ab+'</td><td><span class="shift-tag '+sc+'">'+sl+'</span></td><td style="color:rgba(255,255,255,0.35);font-size:11px;">'+fmtShort(e.ts)+'</td><td style="color:rgba(255,255,255,0.3);font-size:10px;">'+(e.role||'—')+'</td></tr>'+(e.note ? '<tr class="log-note-row"><td colspan="7"><span class="log-note-text"><i class="ti ti-message" style="font-size:11px;vertical-align:-1px;margin-right:4px;"></i>'+e.note+'</span></td></tr>' : '');
   }).join('');
 }
@@ -783,7 +858,70 @@ function confirmPinChange(){
   alert('PIN updated successfully.');
 }
 
-// ── CSV EXPORT ─────────────────────────────────────────────────────────────────
+// ── LOST PLATE FUNCTIONS ───────────────────────────────────────────────────────
+var lostPlateTarget = null;
+
+function openMarkLost(){
+  // Build a dropdown of non-lost plates
+  var available = PLATES.filter(function(id){ return plates[id].status !== 'lost'; });
+  if(available.length === 0){ alert('All plates are already marked as lost.'); return; }
+  // Dynamically set title with plate selector
+  document.getElementById('lost-title').textContent = 'Mark a plate as lost';
+  document.getElementById('lost-report').value = '';
+  document.getElementById('lost-notes').value = '';
+  document.getElementById('lost-error').classList.remove('show');
+  lostPlateTarget = null;
+  // Add plate picker if not there
+  var picker = document.getElementById('lost-plate-picker');
+  if(!picker){
+    picker = document.createElement('div');
+    picker.id = 'lost-plate-picker';
+    picker.className = 'form-field';
+    picker.innerHTML = '<label class="form-label">Select plate *</label><select class="form-input" id="lost-plate-select"><option value="">— Choose a plate —</option></select>';
+    document.getElementById('lost-report').parentNode.parentNode.insertBefore(picker, document.getElementById('lost-report').parentNode);
+  }
+  var sel = document.getElementById('lost-plate-select');
+  sel.innerHTML = '<option value="">— Choose a plate —</option>';
+  available.forEach(function(id){
+    var opt = document.createElement('option');
+    opt.value = id; opt.textContent = id+(plates[id].status==='out' ? ' (currently signed out by '+plates[id].tech+')' : '');
+    sel.appendChild(opt);
+  });
+  document.getElementById('modal-lost').classList.add('open');
+}
+
+function confirmMarkLost(){
+  var sel = document.getElementById('lost-plate-select');
+  var plateId = sel ? sel.value : lostPlateTarget;
+  if(!plateId){ document.getElementById('lost-error').textContent='Please select a plate.'; document.getElementById('lost-error').classList.add('show'); return; }
+  var report = document.getElementById('lost-report').value.replace(/^\s+|\s+$/g,'');
+  if(!report){ document.getElementById('lost-error').textContent='Please enter a police report number.'; document.getElementById('lost-error').classList.add('show'); return; }
+  document.getElementById('lost-error').classList.remove('show');
+  var notes = document.getElementById('lost-notes').value.replace(/^\s+|\s+$/g,'');
+  plates[plateId] = {status:'lost', tech:'N/A', role:null, empId:null, since:null, lostReport:report, lostNotes:notes};
+  savePlate(plateId);
+  saveLogEntry({plate:plateId, tech:'Admin', role:'Admin', empId:'—', action:'lost', ts:Date.now(), note:'Police Report: '+report+(notes?' | '+notes:'')});
+  closeModals();
+  render();
+  renderAdmin();
+}
+
+function openRestorePlate(id){
+  lostPlateTarget = id;
+  document.getElementById('restore-sub').textContent = 'Mark plate '+id+' as recovered and return it to active inventory?';
+  document.getElementById('modal-restore').classList.add('open');
+}
+
+function confirmRestore(){
+  if(!lostPlateTarget) return;
+  plates[lostPlateTarget] = {status:'available', tech:null, role:null, empId:null, since:null, lostReport:null, lostNotes:null};
+  savePlate(lostPlateTarget);
+  saveLogEntry({plate:lostPlateTarget, tech:'Admin', role:'Admin', empId:'—', action:'ret', ts:Date.now(), note:'Plate recovered and restored to inventory'});
+  lostPlateTarget = null;
+  closeModals();
+  render();
+  renderAdmin();
+}
 function exportCSV(){
   if(log.length === 0) return;
   var headers = ['Plate Number','Associate','Employee ID','Role','Action','Shift','Date & Time','Overdue Note'];
